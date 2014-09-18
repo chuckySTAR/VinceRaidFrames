@@ -27,7 +27,7 @@ local MarkerPixie = {
 	cr = "ffffffff",
 	loc = {
 		fPoints = {1, .5, 1, .5},
-		nOffsets = {-20, -10, 0, 10}
+		nOffsets = {-25, -10, -5, 10}
 	}
 }
 
@@ -65,6 +65,7 @@ function Member:new(unit, groupMember, settings, parent, xmlDoc)
 
 	o.classColor = settings.classColors[o.classId]
 
+	o.memberOverlay = o.frame:FindChild("MemberOverlay")
 	o.container = o.frame:FindChild("Container")
 	o.overlay = o.frame:FindChild("Overlay")
 	o.health = o.frame:FindChild("HealthBar")
@@ -124,9 +125,9 @@ end
 function Member:SetAggro(aggro)
 	self.hasAggro = aggro
 	if aggro then
-		self.frame:SetBGColor(self.settings.memberBorderAggroColor)
+		self.container:SetBGColor(self.settings.memberBorderAggroColor)
 	else
-		self.frame:SetBGColor(self.settings.memberBorderColor)
+		self.container:SetBGColor(self.settings.memberBorderColor)
 	end
 end
 
@@ -222,13 +223,13 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		local sprite = tTargetMarkSpriteMap[unit:GetTargetMarker()]
 		if sprite and not self.targetMarkerPixie then
 			MarkerPixie.strSprite = sprite
-			self.targetMarkerPixie = self.frame:AddPixie(MarkerPixie)
+			self.targetMarkerPixie = self.memberOverlay:AddPixie(MarkerPixie)
 		elseif not sprite then
-			self.frame:DestroyPixie(self.targetMarkerPixie)
+			self.memberOverlay:DestroyPixie(self.targetMarkerPixie)
 			self.targetMarkerPixie = nil
 		end
 	elseif self.targetMarkerPixie then
-		self.frame:DestroyPixie(self.targetMarkerPixie)
+		self.memberOverlay:DestroyPixie(self.targetMarkerPixie)
 		self.targetMarkerPixie = nil
 	end
 
