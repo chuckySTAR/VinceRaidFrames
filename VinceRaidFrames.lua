@@ -275,7 +275,6 @@ function VinceRaidFrames:OnGroup_ReadyCheck(index, message)
 end
 
 function VinceRaidFrames:OnReadyCheckTimeout()
-	log("readychecktimeout")
 	self.readyCheckActive = false
 	for name, member in pairs(self.members) do
 		member:UnsetReadyCheckMode()

@@ -347,7 +347,14 @@ end
 function Member:RemovePotion()
 	if self.potionPixie then
 		if self.foodPixie then
-			self:MoveIcon(self.foodPixie, 0)
+			self.overlay:UpdatePixie(self.foodPixie, {
+				cr = "ffffffff",
+				strSprite = self.lastFoodSprite,
+				loc = {
+					fPoints = {1, .5, 1, .5},
+					nOffsets = {self:GetIconOffsets(0)}
+				}
+			})
 		end
 		
 		self.overlay:DestroyPixie(self.potionPixie)
