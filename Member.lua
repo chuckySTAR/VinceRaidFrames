@@ -12,6 +12,25 @@ local ktIdToClassSprite =
 	[GameLib.CodeEnumClass.Spellslinger] 	= "Icon_Windows_UI_CRB_Spellslinger",
 }
 
+local tTargetMarkSpriteMap = {
+	"Icon_Windows_UI_CRB_Marker_Bomb",
+	"Icon_Windows_UI_CRB_Marker_Ghost",
+	"Icon_Windows_UI_CRB_Marker_Mask",
+	"Icon_Windows_UI_CRB_Marker_Octopus",
+	"Icon_Windows_UI_CRB_Marker_Pig",
+	"Icon_Windows_UI_CRB_Marker_Chicken",
+	"Icon_Windows_UI_CRB_Marker_Toaster",
+	"Icon_Windows_UI_CRB_Marker_UFO"
+}
+
+local MarkerPixie = {
+	cr = "ffffffff",
+	loc = {
+		fPoints = {1, .5, 1, .5},
+		nOffsets = {-20, -10, 0, 10}
+	}
+}
+
 local ColorByClass = 1
 local ColorByHealth = 2
 
@@ -31,6 +50,7 @@ function Member:new(unit, groupMember, settings, parent, xmlDoc)
 		classId = groupMember and groupMember.eClassId or unit:GetClassId(),
 		classColor = nil,
 		classIconPixie = nil,
+		targetMarkerPixie = nil,
 		hasAggro = false,
 		potionPixie = nil,
 		foodPixie = nil,
@@ -45,6 +65,7 @@ function Member:new(unit, groupMember, settings, parent, xmlDoc)
 
 	o.classColor = settings.classColors[o.classId]
 
+	o.container = o.frame:FindChild("Container")
 	o.overlay = o.frame:FindChild("Overlay")
 	o.health = o.frame:FindChild("HealthBar")
 	o.shield = o.frame:FindChild("ShieldBar")
@@ -70,8 +91,17 @@ function Member:new(unit, groupMember, settings, parent, xmlDoc)
 	return o
 end
 
+function Member:GetWidth()
+	return self.settings.memberWidth + (self.settings.memberShowTargetMarker and 20 or 0)
+end
+
+function Member:GetHeight()
+	return self.settings.memberHeight
+end
+
 function Member:Arrange()
-	self.frame:SetAnchorOffsets(0, 0, self.settings.memberWidth, self.settings.memberHeight)
+	self.frame:SetAnchorOffsets(0, 0, self:GetWidth(), self:GetHeight())
+	self.container:SetAnchorOffsets(0, 0, self.settings.memberShowTargetMarker and -20 or 0, 0)
 	if self.settings.memberShieldsBelowHealth then
 		self.frame:FindChild("Health"):SetAnchorOffsets(1, 1, -1, -1 - self.settings.memberShieldHeight - self.settings.memberAbsorbHeight)
 
@@ -186,6 +216,20 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		self.health:SetAnchorPoints(1 - health, 0, 1, 1)
 		self.shield:SetAnchorPoints(0, 0, 1 - shield, 1)
 		self.absorb:SetAnchorPoints(0, 0, 1 - absorb, 1)
+	end
+
+	if unit then
+		local sprite = tTargetMarkSpriteMap[unit:GetTargetMarker()]
+		if sprite and not self.targetMarkerPixie then
+			MarkerPixie.strSprite = sprite
+			self.targetMarkerPixie = self.frame:AddPixie(MarkerPixie)
+		elseif not sprite then
+			self.frame:DestroyPixie(self.targetMarkerPixie)
+			self.targetMarkerPixie = nil
+		end
+	elseif self.targetMarkerPixie then
+		self.frame:DestroyPixie(self.targetMarkerPixie)
+		self.targetMarkerPixie = nil
 	end
 
 	

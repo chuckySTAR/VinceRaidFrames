@@ -100,6 +100,7 @@ function VinceRaidFrames:new(o)
 		memberLowHealthColor = {a = 1, r = 1, g = 0, b = 0},
 		memberHighHealthColor = {a = 1, r = 0, g = 1, b = 0},
 		memberShowClassIcon = false,
+		memberShowTargetMarker = true,
 		memberIconSizes = 16,
 		memberMaxRows = 10,
 		memberSpaceBetween = 2,
@@ -408,13 +409,13 @@ function VinceRaidFrames:ArrangeMembers()
 	for i, member in ipairs(members) do
 		local row = (i - 1) % rows
 		local column = floor((i - 1) / rows)
-		local left = self.settings.padding + column * (self.settings.memberWidth + self.settings.memberSpaceBetween)
-		local top = topPadding + self.settings.padding + row * (self.settings.memberHeight + self.settings.memberSpaceBetween)
-		member.frame:SetAnchorOffsets(left, top, left + self.settings.memberWidth, top + self.settings.memberHeight)
+		local left = self.settings.padding + column * (member:GetWidth() + self.settings.memberSpaceBetween)
+		local top = topPadding + self.settings.padding + row * (member:GetHeight() + self.settings.memberSpaceBetween)
+		member.frame:SetAnchorOffsets(left, top, left + member:GetWidth(), top + member:GetHeight())
 	end
-	
+
 	local left, top, right, bottom = self.wndMain:GetAnchorOffsets()
-	self.wndMain:SetAnchorOffsets(left, top, left + 2 * self.settings.padding + columns * (self.settings.memberWidth + self.settings.memberSpaceBetween) - self.settings.memberSpaceBetween, top + 2 * self.settings.padding + min(self.settings.memberMaxRows, #members) * (self.settings.memberHeight + self.settings.memberSpaceBetween) - self.settings.memberSpaceBetween + topPadding)
+	self.wndMain:SetAnchorOffsets(left, top, left + 2 * self.settings.padding + columns * (members[1]:GetWidth() + self.settings.memberSpaceBetween) - self.settings.memberSpaceBetween, top + 2 * self.settings.padding + min(self.settings.memberMaxRows, #members) * (members[1]:GetHeight() + self.settings.memberSpaceBetween) - self.settings.memberSpaceBetween + topPadding)
 end
 
 function VinceRaidFrames:ArrangeMemberFrames()
