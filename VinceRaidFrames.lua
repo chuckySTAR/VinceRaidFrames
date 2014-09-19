@@ -93,10 +93,10 @@ function VinceRaidFrames:new(o)
 		memberWidth = 100,
 		memberFont = "CRB_Interface9",
 		memberColor = {a = 1, r = 1, g = 1, b = 1},
-		memberOfflineTextColor = {a = 1, r = .7, g = 0, b = 0},
+		memberOfflineTextColor = {a = 1, r = .1, g = .1, b = .1},
 		memberDeadTextColor = {a = 1, r = .5, g = .5, b = .5},
+		memberAggroTextColor = {a = 1, r = .86, g = .28, b = .28},
 		memberBorderColor = "ff111111",
-		memberBorderAggroColor = "ffaa0000",
 		memberLowHealthColor = {a = 1, r = 1, g = 0, b = 0},
 		memberHighHealthColor = {a = 1, r = 0, g = 1, b = 0},
 		memberShowClassIcon = false,
@@ -242,6 +242,7 @@ function VinceRaidFrames:LoadXml(callback)
 	else
 		self.xmlDoc = XmlDoc.CreateFromFile("VinceRaidFrames.xml")
 		self.xmlDoc:RegisterCallback(callback, self)
+		Apollo.LoadSprites("VinceRaidFramesSprites.xml", "VinceRaidFramesSprites")
 	end
 end
 

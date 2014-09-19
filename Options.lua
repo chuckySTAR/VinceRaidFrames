@@ -166,6 +166,22 @@ function Options:OnColorBy(wndHandler, wndControl)
 	self.parent:UpdateColorBy()
 end
 
+--function Options:OnQueryBeginDragDrop(wndHandler, wndControl, nX, nY)
+function Options:OnQueryBeginDragDrop(wndHandler, wndControl, nX, nY)
+	SendVarToRover("QueryBeginDragDrop", {wndHandler, wndControl, nX, nY}, 0)
+	Apollo.BeginDragDrop(wndControl, "iwas", "Icon_SkillMind_UI_espr_rpls", 5)
+	return true
+end
+
+function Options:OnDragDrop(...)
+	SendVarToRover("OnDragDrop", {...}, 0)
+end
+
+function Options:OnQueryDragDrop(...)
+	SendVarToRover("OnQueryDragDrop", {...}, 0)
+	return Apollo.DragDropQueryResult.Accept
+end
+
 
 function Options:InitSliderWidget(frame, min, max, tick, value, roundDigits, callback)
 	frame:SetData({

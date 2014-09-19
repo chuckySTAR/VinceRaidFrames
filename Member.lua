@@ -125,9 +125,9 @@ end
 function Member:SetAggro(aggro)
 	self.hasAggro = aggro
 	if aggro then
-		self.container:SetBGColor(self.settings.memberBorderAggroColor)
+		self:SetNameColor(self.settings.memberAggroTextColor)
 	else
-		self.container:SetBGColor(self.settings.memberBorderColor)
+		self:SetNameColor(self.settings.memberColor)
 	end
 end
 
@@ -195,12 +195,14 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		self.frame:SetOpacity(1, 5)
 	end
 
-	if not online then
-		self:SetNameColor(self.settings.memberOfflineTextColor)
-	elseif dead then
-		self:SetNameColor(self.settings.memberDeadTextColor)
-	else
-		self:SetNameColor(self.settings.memberColor)
+	if not self.hasAggro then
+		if not online then
+			self:SetNameColor(self.settings.memberOfflineTextColor)
+		elseif dead then
+			self:SetNameColor(self.settings.memberDeadTextColor)
+		else
+			self:SetNameColor(self.settings.memberColor)
+		end
 	end
 
 	if self.settings.colorBy == ColorByHealth then
