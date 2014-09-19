@@ -53,6 +53,7 @@ function VinceRaidFrames:new(o)
 	o.onLoadDelayTimer = nil -- Dependencies in RegisterAddon do not *really* work
 	o.timer = nil -- Refresh timer
 	o.readyCheckActive = false -- Different view during ready check
+	o.arrangeOnNextRefresh = false
 	o.members = {}
 	o.mobsInCombat = {}
 	
@@ -312,18 +313,16 @@ function VinceRaidFrames:OnRefresh()
 			if groupMember then
 				self.wndRaidLeaderOptionsBtn:Show(groupMember.bIsLeader or groupMember.bRaidAssistant)
 				self.wndRaidMasterLootBtn:Show(groupMember.bIsLeader)
-
---				self.wndSelfConfigSetAsDPS:SetCheck(groupMember.bDPS)
---				self.wndSelfConfigSetAsDPS:SetData(1)
---				self.wndSelfConfigSetAsHealer:SetCheck(groupMember.bHealer)
---				self.wndSelfConfigSetAsHealer:SetData(1)
---				self.wndSelfConfigSetAsNormTank:SetCheck(groupMember.bTank)
---				self.wndSelfConfigSetAsNormTank:SetData(1)
 			else
 				self.wndRaidLeaderOptionsBtn:Show(false)
 				self.wndRaidMasterLootBtn:Show(false)
 			end
 		end
+	end
+
+	if self.arrangeOnNextRefresh then
+		self.arrangeOnNextRefresh = false
+		self:ArrangeMembers()
 	end
 
 	self:RefreshAggroIndicators()
@@ -400,9 +399,16 @@ function VinceRaidFrames:ArrangeMembers()
 	local rows = self.settings.memberMaxRows
 	local columns = ceil(#members / rows)
 	local topPadding = 14
-	
+
 	-- In case of PlayerView the Member class has no groupMember attribute
 	if #members > 1 then
+		for i, member in ipairs(members) do
+			if not member.groupMember then -- well fu** you too then
+				self.arrangeOnNextRefresh = true
+				return
+			end
+		end
+
 		table.sort(members, self[SortIdToName[self.settings.sortBy]])
 	end
 
