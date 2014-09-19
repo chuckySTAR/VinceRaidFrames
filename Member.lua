@@ -59,7 +59,10 @@ function Member:new(unit, groupMember, settings, parent, xmlDoc)
 		health = nil,
 		flash = nil,
 		text = nil,
-		timer = nil
+		timer = nil,
+		outOfRange = false,
+		dead = false,
+		online = true
 	}
     setmetatable(o, self)
 
@@ -127,7 +130,7 @@ function Member:SetAggro(aggro)
 	if aggro then
 		self:SetNameColor(self.settings.memberAggroTextColor)
 	else
-		self:SetNameColor(self.settings.memberColor)
+		self:RefreshNameColor()
 	end
 end
 
@@ -166,44 +169,33 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	local health
 	local shield
 	local absorb
-	local outOfRange
-	local dead
-	local online
 
 	if groupMember then
 		health = groupMember.nHealth / groupMember.nHealthMax
 		shield = groupMember.nShield / groupMember.nShieldMax
 		absorb = groupMember.nAbsorptionMax == 0 and 0 or groupMember.nAbsorption / groupMember.nAbsorptionMax
 
-		outOfRange = groupMember.nHealthMax == 0 or not unit
-		dead = groupMember.nHealth == 0 and groupMember.nHealthMax ~= 0
-		online = groupMember.bIsOnline
+		self.outOfRange = groupMember.nHealthMax == 0 or not unit
+		self.dead = groupMember.nHealth == 0 and groupMember.nHealthMax ~= 0
+		self.online = groupMember.bIsOnline
 	else
 		health = unit:GetHealth() / unit:GetMaxHealth()
 		shield = unit:GetShieldCapacity() / unit:GetShieldCapacityMax()
 		absorb = unit:GetAbsorptionMax() == 0 and 0 or unit:GetAbsorptionValue() / unit:GetAbsorptionMax()
 
-		outOfRange = false
-		dead = unit:IsDead()
-		online = true
+		self.outOfRange = false
+		self.dead = unit:IsDead()
+		self.online = true
 	end
 
 	-- Todo: Remember last status in order to optimse useless function calls
-	if outOfRange and not dead and online then
+	if self.outOfRange and not self.dead and self.online then
 		self.frame:SetOpacity(self.settings.memberOutOfRangeOpacity, 5)
 	else
 		self.frame:SetOpacity(1, 5)
 	end
 
-	if not self.hasAggro then
-		if not online then
-			self:SetNameColor(self.settings.memberOfflineTextColor)
-		elseif dead then
-			self:SetNameColor(self.settings.memberDeadTextColor)
-		else
-			self:SetNameColor(self.settings.memberColor)
-		end
-	end
+	self:RefreshNameColor()
 
 	if self.settings.colorBy == ColorByHealth then
 		self:SetHealthColor(self.GetColorBetween(self.settings.memberLowHealthColor, self.settings.memberHighHealthColor, health))
@@ -275,6 +267,18 @@ function Member:RefreshIcons()
 		end
 		if not foodFound then
 			self:RemoveFood()
+		end
+	end
+end
+
+function Member:RefreshNameColor()
+	if not self.hasAggro then
+		if not self.online then
+			self:SetNameColor(self.settings.memberOfflineTextColor)
+		elseif self.dead then
+			self:SetNameColor(self.settings.memberDeadTextColor)
+		else
+			self:SetNameColor(self.settings.memberColor)
 		end
 	end
 end
