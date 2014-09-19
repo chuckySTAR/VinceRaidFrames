@@ -151,18 +151,16 @@ end
 function Member:UpdateColorBy(color)
 	if color == ColorByClass and not self.readyCheckMode then
 		self:SetHealthColor(self.classColor)
-	elseif color == ColorByHealth then
-		self:Refresh()
+--	elseif color == ColorByHealth then
+--		self:Refresh()
 	end
 end
 
 
 function Member:Refresh(readyCheckMode, unit, groupMember)
 	self.readyCheckMode = readyCheckMode
-	self.groupMember = groupMember and groupMember or self.groupMember
 	self.unit = unit and unit or self.unit
 
-	groupMember = self.groupMember
 	unit = self.unit
 
 	local health
