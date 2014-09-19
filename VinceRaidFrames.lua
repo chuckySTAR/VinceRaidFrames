@@ -320,11 +320,6 @@ function VinceRaidFrames:OnRefresh()
 		end
 	end
 
-	if self.arrangeOnNextRefresh then
-		self.arrangeOnNextRefresh = false
-		self:ArrangeMembers()
-	end
-
 	self:RefreshAggroIndicators()
 end
 
@@ -402,13 +397,6 @@ function VinceRaidFrames:ArrangeMembers()
 
 	-- In case of PlayerView the Member class has no groupMember attribute
 	if #members > 1 then
-		for i, member in ipairs(members) do
-			if not member.groupMember then -- well fu** you too then
-				self.arrangeOnNextRefresh = true
-				return
-			end
-		end
-
 		table.sort(members, self[SortIdToName[self.settings.sortBy]])
 	end
 
