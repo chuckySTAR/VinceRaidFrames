@@ -161,6 +161,7 @@ end
 
 
 function Member:Refresh(readyCheckMode, unit, groupMember)
+	self.groupMember = groupMember
 	self.readyCheckMode = readyCheckMode
 	self.unit = unit and unit or self.unit
 
@@ -370,6 +371,10 @@ function Member:RemoveFood()
 		self.overlay:DestroyPixie(self.foodPixie)
 		self.foodPixie = nil
 	end
+end
+
+function Member:SetDraggable(draggable)
+
 end
 
 function Member:Interrupted(amount)

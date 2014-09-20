@@ -488,6 +488,14 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 		Event_FireGenericEvent("GenericEvent_Raid_ToggleLeaderOptions", false)
 
 		self:UpdateRoleButtons()
+
+		for name, member in pairs(self.members) do
+			member:SetDraggable(true)
+		end
+	else
+		for name, member in pairs(self.members) do
+			member:SetDraggable(false)
+		end
 	end
 end
 

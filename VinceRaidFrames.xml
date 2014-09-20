@@ -242,4 +242,12 @@
             <Event Name="ButtonUncheck" Function="OnShieldsBelowHealth"/>
         </Control>
     </Form>
+    <Form Class="Window" Base="btnRaid_CategoryDropdown" Font="CRB_InterfaceSmall_O" ButtonType="Check" RadioGroup="" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="0" BAnchorOffset="18" TooltipType="OnCursor" Name="Category" BGColor="ffffffff" TextColor="ff31fcf6" TooltipColor="" NormalTextColor="ff2f94ac" PressedTextColor="ff31fcf6" FlybyTextColor="ff2f94ac" PressedFlybyTextColor="ff31fcf6" DisabledTextColor="ff333333" RelativeToClient="1" DrawAsCheckbox="0" Tooltip="">
+        <Control Class="Button" Base="btnRaid_CategoryDropdown" Font="CRB_InterfaceSmall_O" ButtonType="Check" RadioGroup="" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="0" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="0" BAnchorOffset="18" TooltipType="OnCursor" Name="RaidCategoryBtn" BGColor="ffffffff" TextColor="ffffffff" TooltipColor="" NormalTextColor="ff2f94ac" PressedTextColor="ff31fcf6" FlybyTextColor="ff2f94ac" PressedFlybyTextColor="ff31fcf6" DisabledTextColor="ff333333" RelativeToClient="1" DrawAsCheckbox="0" NoClip="0" TestAlpha="0" Tooltip="">
+            <Event Name="ButtonCheck" Function="OnRaidCategoryBtnToggle"/>
+            <Event Name="ButtonUncheck" Function="OnRaidCategoryBtnToggle"/>
+        </Control>
+        <Control Class="Window" LAnchorPoint="0" LAnchorOffset="0" TAnchorPoint="0" TAnchorOffset="16" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="1" BAnchorOffset="-2" RelativeToClient="1" Font="Default" Text="" Template="Default" TooltipType="OnCursor" Name="RaidCategoryItems" BGColor="ffffffff" TextColor="ffffffff" TooltipColor="" TopEdgeControlsAnchor=""/>
+        <Control Class="Window" LAnchorPoint="0" LAnchorOffset="-2" TAnchorPoint="0" TAnchorOffset="-1" RAnchorPoint="1" RAnchorOffset="0" BAnchorPoint="0" BAnchorOffset="17" RelativeToClient="1" Font="CRB_InterfaceSmall_O" Text="" Template="Default" TooltipType="OnCursor" Name="RaidCategoryName" BGColor="ffffffff" TextColor="ff2f94ac" TooltipColor=""/>
+    </Form>
 </Forms>
