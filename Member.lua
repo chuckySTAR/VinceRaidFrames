@@ -164,8 +164,6 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	self.readyCheckMode = readyCheckMode
 	self.unit = unit and unit or self.unit
 
-	unit = self.unit
-
 	local health
 	local shield
 	local absorb
