@@ -11,4 +11,6 @@
     <Script Name="Member.lua"/>
 
     <Script Name="VinceRaidFrames.lua"/>
+
+    <ReplaceAddon Name="RaidFrameBase"/>
 </Addon>
