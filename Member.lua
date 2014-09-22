@@ -1,6 +1,7 @@
 local setmetatable = setmetatable
 local ipairs = ipairs
 local abs = math.abs
+local floor = math.floor
 
 local ktIdToClassSprite =
 {
@@ -27,7 +28,7 @@ local MarkerPixie = {
 	cr = "ffffffff",
 	loc = {
 		fPoints = {1, .5, 1, .5},
-		nOffsets = {-25, -10, -5, 10}
+		nOffsets = {-22, -10, -2, 10}
 	}
 }
 
@@ -474,6 +475,11 @@ end
 
 function Member:Destroy()
 	self.frame:Destroy()
+end
+
+function Member.round(num, digits)
+	local mult = 10^(digits or 0)
+	return floor(num * mult + .5) / mult
 end
 
 function Member.GetColorBetween(from, to, position)

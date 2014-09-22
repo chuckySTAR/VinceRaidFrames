@@ -91,7 +91,7 @@ function VinceRaidFrames:new(o)
 			[48466] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich"
 		},
 		memberHeight = 26,
-		memberWidth = 100,
+		memberWidth = 104,
 		memberFont = "CRB_Interface9",
 		memberColor = {a = 1, r = 1, g = 1, b = 1},
 		memberOfflineTextColor = {a = 1, r = .1, g = .1, b = .1},
