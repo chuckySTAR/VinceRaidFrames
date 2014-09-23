@@ -78,6 +78,7 @@ function VinceRaidFrames:new(o)
 			[48443] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich", -- Exile Empanadas - 67 Moxie
 			[48464] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
 			[47542] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
+			[47991] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich", -- Grit
 			[47565] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
 			[48421] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
 			[48475] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",

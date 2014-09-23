@@ -72,6 +72,7 @@ function Member:new(unit, groupMember, settings, parent, xmlDoc)
 	o.memberOverlay = o.frame:FindChild("MemberOverlay")
 	o.container = o.frame:FindChild("Container")
 	o.overlay = o.frame:FindChild("Overlay")
+	o.healthOverlay = o.frame:FindChild("HealthOverlay")
 	o.health = o.frame:FindChild("HealthBar")
 	o.shield = o.frame:FindChild("ShieldBar")
 	o.absorb = o.frame:FindChild("AbsorbBar")
@@ -137,18 +138,31 @@ end
 
 function Member:ShowClassIcon(show)
 	if show then
-		self.classIconPixie = self.overlay:AddPixie({
-			cr = "ff111111",
+		self.classIconBGPixie = self.healthOverlay:AddPixie({
+			cr = "ffffffff",
+			strSprite = "AbilitiesSprites:spr_TierFrame",
+			loc = {
+				fPoints = {0, .5, 0, .5},
+				nOffsets = {1, -9, 19, 9}
+			}
+		})
+		self.classIconPixie = self.healthOverlay:AddPixie({
+			cr = "ffffffff",
 			strSprite = "IconSprites:" .. ktIdToClassSprite[self.classId],
 			loc = {
 				fPoints = {0, .5, 0, .5},
 				nOffsets = {2, -8, 18, 8}
 			}
 		})
-		self.text:SetAnchorOffsets(20, 0, 70, 0)
+		self.text:SetAnchorOffsets(21, 0, 70, 0)
 	else
-		self.overlay:DestroyPixie(self.classIconPixie)
-		self.text:SetAnchorOffsets(5, 0, 70, 0)
+		if self.classIconPixie then
+			self.healthOverlay:DestroyPixie(self.classIconBGPixie)
+			self.healthOverlay:DestroyPixie(self.classIconPixie)
+			self.text:SetAnchorOffsets(5, 0, 70, 0)
+			self.classIconPixie = nil
+			self.classIconBGPixie = nil
+		end
 	end
 end
 
@@ -213,16 +227,23 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 
 	if unit then
 		local sprite = tTargetMarkSpriteMap[unit:GetTargetMarker()]
-		if sprite and not self.targetMarkerPixie then
+		if sprite then
 			MarkerPixie.strSprite = sprite
-			self.targetMarkerPixie = self.memberOverlay:AddPixie(MarkerPixie)
+			if not self.targetMarkerPixie then
+				self.targetMarkerPixie = self.memberOverlay:AddPixie(MarkerPixie)
+			elseif sprite ~= self.targetMarkerSprite then
+				self.memberOverlay:UpdatePixie(self.targetMarkerPixie, MarkerPixie)
+			end
+			self.targetMarkerSprite = sprite
 		elseif not sprite then
 			self.memberOverlay:DestroyPixie(self.targetMarkerPixie)
 			self.targetMarkerPixie = nil
+			self.targetMarkerSprite = ""
 		end
 	elseif self.targetMarkerPixie then
 		self.memberOverlay:DestroyPixie(self.targetMarkerPixie)
 		self.targetMarkerPixie = nil
+		self.targetMarkerSprite = ""
 	end
 
 	
