@@ -37,8 +37,8 @@ local SortIdToName = {
 	[4] = "SortByOrder"
 }
 
-local WrongInterruptSpellIds = {
-	[33081] = true -- Esper's Fade Out
+local WrongInterruptBaseSpellIds = {
+	[19190] = true -- Esper's Fade Out
 }
 
 
@@ -433,7 +433,7 @@ end
 
 
 function VinceRaidFrames:OnCombatLogCCState(e)
-	if e.nInterruptArmorHit > 0 and e.unitCaster and not WrongInterruptSpellIds[e.splCallingSpell:GetId()] then
+	if e.nInterruptArmorHit > 0 and e.unitCaster and not WrongInterruptBaseSpellIds[e.splCallingSpell:GetBaseSpellId()] then
 		local member = self.members[e.unitCaster:GetName()]
 		if member then
 			member:Interrupted(e.nInterruptArmorHit)
