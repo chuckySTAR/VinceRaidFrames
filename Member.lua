@@ -24,6 +24,8 @@ local tTargetMarkSpriteMap = {
 	"Icon_Windows_UI_CRB_Marker_UFO"
 }
 
+local FoodBuffName = GameLib.GetSpell(48443):GetName()
+
 local MarkerPixie = {
 	cr = "ffffffff",
 	loc = {
@@ -225,7 +227,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		self.absorb:SetAnchorPoints(0, 0, 1 - absorb, 1)
 	end
 
-	if unit then
+	if unit and self.settings.memberShowTargetMarker then
 		local sprite = tTargetMarkSpriteMap[unit:GetTargetMarker()]
 		if sprite then
 			MarkerPixie.strSprite = sprite
@@ -248,7 +250,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 
 	
 	if readyCheckMode then
-		self:RefreshIcons()
+		self:RefreshBuffIcons()
 		if groupMember and groupMember.bHasSetReady then
 			if not groupMember.bReady then
 				self:SetHealthColor("ff0000")
@@ -261,7 +263,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	end
 end
 
-function Member:RefreshIcons()
+function Member:RefreshBuffIcons()
 	if self.unit then
 		local potionFound = false
 		local foodFound = false
@@ -269,7 +271,7 @@ function Member:RefreshIcons()
 		if buffs then
 			for key, buff in ipairs(buffs.arBeneficial) do
 				local potionSprite = self.settings.potions[buff.splEffect:GetId()]
-				local foodSprite = self.settings.food[buff.splEffect:GetId()]
+				local foodSprite = buff.splEffect:GetName() == FoodBuffName and "IconSprites:Icon_ItemMisc_UI_Item_Sammich"
 				if potionSprite then
 					potionFound = true
 					self:AddPotion(potionSprite)
@@ -319,7 +321,7 @@ function Member:UnsetReadyCheckMode()
 	self:RemoveFood()
 end
 
-function Member:GetIconOffsets(position)
+function Member:GetBuffIconOffsets(position)
 	return -(position + 1) * self.settings.memberIconSizes - 1 -3 * position, -self.settings.memberIconSizes / 2, -position * self.settings.memberIconSizes - 1 -3 * position, self.settings.memberIconSizes / 2
 end
 
@@ -334,7 +336,7 @@ function Member:AddPotion(sprite)
 			strSprite = self.lastFoodSprite,
 			loc = {
 				fPoints = {1, .5, 1, .5},
-				nOffsets = {self:GetIconOffsets(1)}
+				nOffsets = {self:GetBuffIconOffsets(1)}
 			}
 		})
 	end
@@ -344,7 +346,7 @@ function Member:AddPotion(sprite)
 		strSprite = sprite,
 		loc = {
 			fPoints = {1, .5, 1, .5},
-			nOffsets = {self:GetIconOffsets(0)}
+			nOffsets = {self:GetBuffIconOffsets(0)}
 		}
 	})
 end
@@ -365,7 +367,7 @@ function Member:AddFood(sprite)
 		strSprite = sprite,
 		loc = {
 			fPoints = {1, .5, 1, .5},
-			nOffsets = {self:GetIconOffsets(position)}
+			nOffsets = {self:GetBuffIconOffsets(position)}
 		}
 	})
 end
@@ -378,7 +380,7 @@ function Member:RemovePotion()
 				strSprite = self.lastFoodSprite,
 				loc = {
 					fPoints = {1, .5, 1, .5},
-					nOffsets = {self:GetIconOffsets(0)}
+					nOffsets = {self:GetBuffIconOffsets(0)}
 				}
 			})
 		end

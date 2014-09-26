@@ -36,7 +36,6 @@ local SortIdToName = {
 	[3] = "SortByName",
 	[4] = "SortByOrder"
 }
-
 local WrongInterruptBaseSpellIds = {
 	[19190] = true -- Esper's Fade Out
 }
@@ -73,23 +72,11 @@ function VinceRaidFrames:new(o)
 			[35028] = "IconSprites:Icon_ItemMisc_potion_0002", -- Expert Brutality Boost
 			[36579] = "IconSprites:Icon_ItemMisc_potion_0003", -- Expert Tech Boost
 			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001" -- Expert Finesse Boost
-		},
-		food = {
-			[48443] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich", -- Exile Empanadas - 67 Moxie
-			[48464] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[47542] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[47991] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich", -- Grit
-			[47565] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48421] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48475] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48203] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48428] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48462] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48477] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48432] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[47923] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48473] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich",
-			[48466] = "IconSprites:Icon_ItemMisc_UI_Item_Sammich"
+
+--			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Liquid Focus - Reactive Strikethrough Boost
+--
+--			[37054] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Finesse Boost
+--			[35062] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Brutality Boost
 		},
 		memberHeight = 26,
 		memberWidth = 104,
