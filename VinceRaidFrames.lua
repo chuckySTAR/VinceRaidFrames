@@ -661,6 +661,15 @@ function VinceRaidFrames:ValidateGroups(groups)
 	return true
 end
 
+function VinceRaidFrames:IsLeader(name)
+	for i = 1, GroupLibGetMemberCount() do
+		if GroupLibGetGroupMember(i).bIsLeader then
+			return true
+		end
+	end
+	return false
+end
+
 function VinceRaidFrames:ShareGroupLayout()
 	self.channel:SendMessage(self.settings.groups)
 end
@@ -683,11 +692,10 @@ function VinceRaidFrames:GetUniqueGroupName()
 end
 
 --function VinceRaidFrames:OnICCommMessageReceived(channel, message)
-function VinceRaidFrames:OnICCommMessageReceived(...)
-	log("iccomm", {...}, 0)
-	local message = ({...})[2]
-	if self:ValidateGroups(message) then
+function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
+	if self:IsLeader(sender) and self:ValidateGroups(message) then
 		self.settings.groups = message
+		self:ArrangeMembers()
 	end
 end
 
