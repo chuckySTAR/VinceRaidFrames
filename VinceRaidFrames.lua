@@ -8,10 +8,12 @@ end
 require "Window"
 require "GameLib"
 require "GroupLib"
+require "ICCommLib"
 
 local Options = Apollo.GetPackage("Vince:VRF:Options-1").tPackage
 local ReadyCheck = Apollo.GetPackage("Vince:VRF:ReadyCheck-1").tPackage
 local Member = Apollo.GetPackage("Vince:VRF:Member-1").tPackage
+local ContextMenu = Apollo.GetPackage("Vince:VRF:ContextMenu-1").tPackage
 
 local pairs = pairs
 local ipairs = ipairs
@@ -52,9 +54,9 @@ function VinceRaidFrames:new(o)
 	o.onLoadDelayTimer = nil -- Dependencies in RegisterAddon do not *really* work
 	o.timer = nil -- Refresh timer
 	o.readyCheckActive = false -- Different view during ready check
-	o.arrangeOnNextRefresh = false
 	o.members = {}
 	o.mobsInCombat = {}
+	o.groupFrames = {}
 	
 	o.defaultSettings = {
 		classColors = {
@@ -86,12 +88,11 @@ function VinceRaidFrames:new(o)
 		memberDeadTextColor = {a = 1, r = .5, g = .5, b = .5},
 		memberAggroTextColor = {a = 1, r = .86, g = .28, b = .28},
 		memberBorderColor = "ff111111",
-		memberLowHealthColor = {a = 1, r = 1, g = 0, b = 0},
-		memberHighHealthColor = {a = 1, r = 0, g = 1, b = 0},
+		memberLowHealthColor = {r = 1, g = 0, b = 0},
+		memberHighHealthColor = {r = 0, g = 1, b = 0},
 		memberShowClassIcon = false,
 		memberShowTargetMarker = true,
 		memberIconSizes = 16,
-		memberMaxRows = 10,
 		memberSpaceBetween = 2,
         memberFillLeftToRight = true,
 		memberOutOfRangeOpacity = .5,
@@ -100,17 +101,16 @@ function VinceRaidFrames:new(o)
 		memberAbsorbHeight = 1,
 		memberShieldWidth = 16,
 		memberAbsorbWidth = 16,
+		memberColumns = 2,
 		hintArrowOnHover = false,
 		targetOnHover = false,
 		sortBy = 1,
 		colorBy = 1,
-		categoryMaxRows = 7,
-		
 		padding = 5,
+		groups = nil,
 		refreshInterval = .3,
 		interruptFlashDuration = 2.5
 	}
-	
 	o.settings = setmetatable({}, {__index = o.defaultSettings})
 
     return o
@@ -145,6 +145,7 @@ function VinceRaidFrames:OnLoadForReal()
 	Apollo.RegisterEventHandler("Group_Remove", "OnGroup_Remove", self)
 	Apollo.RegisterEventHandler("Group_ReadyCheck", "OnGroup_ReadyCheck", self)
 	Apollo.RegisterEventHandler("Group_MemberFlagsChanged", "OnGroup_MemberFlagsChanged", self)
+	Apollo.RegisterEventHandler("Group_MemberOrderChanged", "OnGroup_MemberOrderChanged", self)
 	Apollo.RegisterEventHandler("TargetUnitChanged", "OnTargetUnitChanged", self)
 	Apollo.RegisterEventHandler("WindowManagementReady", "OnWindowManagementReady", self)
 	Apollo.RegisterEventHandler("ToggleVinceRaidFrames", "OnToggleVinceRaidFrames", self)
@@ -165,12 +166,11 @@ function VinceRaidFrames:OnLoadForReal()
 	
 	self.timer = ApolloTimer.Create(self.settings.refreshInterval, true, "OnRefresh", self)
 	self.timer:Stop()
-	
-	self:Show()
-	-- if GroupLib.InGroup() then
-		-- self:Show()
-	-- end
-	
+
+	if GroupLib.InGroup() or GroupLib.InRaid() then
+		self:Show()
+	end
+
 	-- ready check
 	
 	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Raid Frames", {"ToggleVinceRaidFrames", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
@@ -191,16 +191,15 @@ end
 
 function VinceRaidFrames:Show()
 	if self.wndMain then
-		if GroupLib.InGroup() then
-			self:SetRaidView()
-		else
-			self:SetPlayerView()
-		end
-		
 		self.wndMain:Invoke()
-		
-		self:BuildMemberFrames()
-		self.timer:Start()
+		self:OnMasterLootUpdate()
+
+		if GroupLib.InGroup() or GroupLib.InRaid() then
+			self:BuildMembers()
+			self.timer:Start()
+		else
+			self:Hide()
+		end
 	else
 		self:LoadXml("OnDocLoaded_Main")
 	end
@@ -208,9 +207,9 @@ end
 
 function VinceRaidFrames:OnDocLoaded_Main()
 	self.wndMain = ApolloLoadForm(self.xmlDoc, "VinceRaidFrames", nil, self)
-	self.wndMain:SetData(self)
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames"})
 
+	self.wndGroups = self.wndMain:FindChild("Groups")
 	self.wndGroupBagBtn = self.wndMain:FindChild("GroupBagBtn")
 	self.wndRaidLeaderOptionsBtn = self.wndMain:FindChild("RaidLeaderOptionsBtn")
 	self.wndRaidLeaderOptionsBtn = self.wndMain:FindChild("RaidLeaderOptionsBtn")
@@ -221,6 +220,117 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	self.wndSelfConfigSetAsDPS = self.wndRaidOptions:FindChild("SelfConfigSetAsDPS")
 	self.wndSelfConfigSetAsHealer = self.wndRaidOptions:FindChild("SelfConfigSetAsHealer")
 	self.wndSelfConfigSetAsNormTank = self.wndRaidOptions:FindChild("SelfConfigSetAsNormTank")
+
+	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
+
+	self.groupContextMenu = ContextMenu:new(self.xmlDoc, {
+		{
+			GetLabel = function ()
+				return "Move Up"
+			end,
+			IsVisible = function (value)
+				return value > 1 and value <= #self.settings.groups
+			end,
+			OnClick = function (value)
+				if value <= 1 or value > #self.settings.groups then
+					return
+				end
+
+				local tmp = self.settings.groups[value]
+				self.settings.groups[value] = self.settings.groups[value - 1]
+				self.settings.groups[value - 1] = tmp
+
+				self:ShareGroupLayout()
+				self:ArrangeMembers()
+			end
+		},
+		{
+			GetLabel = function ()
+				return "Move Down"
+			end,
+			IsVisible = function (value)
+				return value < #self.settings.groups and value >= 1
+			end,
+			OnClick = function (value)
+				if value < 1 or value >= #self.settings.groups then
+					return
+				end
+
+				local tmp = self.settings.groups[value]
+				self.settings.groups[value] = self.settings.groups[value + 1]
+				self.settings.groups[value + 1] = tmp
+
+				self:ShareGroupLayout()
+				self:ArrangeMembers()
+			end
+		},
+		{
+			GetLabel = function ()
+				return "New Group"
+			end,
+			IsVisible = function ()
+				return true
+			end,
+			OnClick = function (value)
+				local group = {
+					name = self:GetUniqueGroupName(),
+					members = {}
+				}
+				tinsert(self.settings.groups, value, group)
+
+				self:ArrangeMembers()
+
+				local frame = self.groupFrames[group.name].frame
+				local editBox = frame:FindChild("NameEditBox")
+				frame:FindChild("Name"):Show(false, true)
+				editBox:Show(true, true)
+				editBox:SetFocus(true, true)
+				editBox:SetText(group.name)
+				editBox:SetData(group)
+			end
+		},
+		{
+			GetLabel = function ()
+				return "Remove"
+			end,
+			IsVisible = function ()
+				return #self.settings.groups > 1
+			end,
+			OnClick = function (value)
+				if #self.settings.groups <= 1 then
+					return
+				end
+
+				local index = value == #self.settings.groups and value - 1 or #self.settings.groups
+				local newGroup = self.settings.groups[index].members
+				for i, name in ipairs(self.settings.groups[value].members) do
+					tinsert(newGroup, name)
+				end
+				table.remove(self.settings.groups, value)
+
+				self:ShareGroupLayout()
+				self:ArrangeMembers()
+			end
+		},
+		{
+			GetLabel = function ()
+				return "Rename"
+			end,
+			IsVisible = function ()
+				return true
+			end,
+			OnClick = function (value)
+				local group = self.settings.groups[value]
+				local frame = self.groupFrames[group.name].frame
+				local editBox = frame:FindChild("NameEditBox")
+				frame:FindChild("Name"):Show(false, true)
+				editBox:Show(true, true)
+				editBox:SetFocus(true, true)
+				editBox:SetText(group.name)
+				editBox:SetData(group)
+			end
+		}
+	})
 	
 	self:Show()
 end
@@ -327,7 +437,7 @@ function VinceRaidFrames:RefreshAggroIndicators()
 	end
 end
 
-function VinceRaidFrames:BuildMemberFrames()
+function VinceRaidFrames:BuildMembers()
 	local newMembers = {}
 	local count = GroupLibGetMemberCount()
 	for i = 1, count do
@@ -336,7 +446,7 @@ function VinceRaidFrames:BuildMemberFrames()
 		local name = groupMember and groupMember.strCharacterName or unit:GetName() -- SetPlayerView only returns Unit and not a GroupMember
 		local member = self.members[name]
 		if not member then
-			member = Member:new(unit, groupMember, self.settings, self.wndMain, self.xmlDoc)
+			member = Member:new(unit, groupMember, self)
 			self.members[name] = member
 		end
 		newMembers[name] = true
@@ -348,7 +458,6 @@ function VinceRaidFrames:BuildMemberFrames()
 			self.members[name] = nil
 		end
 	end
-	self:OnRefresh()
 	self:ArrangeMembers()
 end
 
@@ -366,7 +475,9 @@ function VinceRaidFrames.SortByOrder(a, b)
 end
 
 function VinceRaidFrames.SortByRole(a, b)
-	return VinceRaidFrames.GetRoleAsNum(a) > VinceRaidFrames.GetRoleAsNum(b)
+	local r1 = VinceRaidFrames.GetRoleAsNum(a)
+	local r2 = VinceRaidFrames.GetRoleAsNum(b)
+	return r1 == r2 and VinceRaidFrames.SortByName(a, b) or r1 > r2
 end
 
 function VinceRaidFrames.SortByName(a, b)
@@ -374,30 +485,246 @@ function VinceRaidFrames.SortByName(a, b)
 end
 
 function VinceRaidFrames.SortByClass(a, b)
-	return a.groupMember.eClassId > b.groupMember.eClassId
+	local r1 = a.groupMember.eClassId
+	local r2 = b.groupMember.eClassId
+	return r1 == r2 and VinceRaidFrames.SortByName(a, b) or r1 > r2
 end
 
 function VinceRaidFrames:ArrangeMembers()
-	local members = self.ToList(self.members)
-	local rows = self.settings.memberMaxRows
-	local columns = ceil(#members / rows)
-	local topPadding = 14
-
-	-- In case of PlayerView the Member class has no groupMember attribute
-	if #members > 1 then
-		table.sort(members, self[SortIdToName[self.settings.sortBy]])
+	if not self.settings.groups then
+		self:CreateDefaultGroups()
 	end
 
-	for i, member in ipairs(members) do
-		local row = (i - 1) % rows
-		local column = floor((i - 1) / rows)
-		local left = self.settings.padding + column * (member:GetWidth() + self.settings.memberSpaceBetween)
-		local top = topPadding + self.settings.padding + row * (member:GetHeight() + self.settings.memberSpaceBetween)
-		member.frame:SetAnchorOffsets(left, top, left + member:GetWidth(), top + member:GetHeight())
+	self:BuildGroups()
+
+	local lastGroup = self.settings.groups[#self.settings.groups].name
+	local memberGroupMap = self:BuildMemberToGroupMap()
+	-- add members to their group frames
+	for name, member in pairs(self.members) do
+		local group = memberGroupMap[name]
+		tinsert(self.groupFrames[group and group or lastGroup].members, member)
+	end
+	-- sort every group
+	for name, group in pairs(self.groupFrames) do
+		table.sort(group.members, self[SortIdToName[self.settings.sortBy]])
 	end
 
+	local topPadding = 20
+	local groupHeaderHeight = 15
+	local accHeight = topPadding
+	for i, group in ipairs(self.settings.groups) do
+		local groupFrame = self.groupFrames[group.name]
+		groupFrame.frame:SetAnchorOffsets(0, accHeight, 0, accHeight + groupHeaderHeight)
+		accHeight = accHeight + groupHeaderHeight
+
+		if groupFrame.frame:FindChild("Btn"):IsChecked() then
+			for j, member in ipairs(groupFrame.members) do
+				member:Hide()
+			end
+		else
+			for j, member in ipairs(groupFrame.members) do
+				local row = floor((j - 1) / self.settings.memberColumns)
+				local left = ((j - 1) % self.settings.memberColumns) * member:GetWidth()
+				member:Show()
+				member.frame:SetAnchorOffsets(left, accHeight + row * member:GetHeight(), left + member:GetWidth(), accHeight + (row + 1) * member:GetHeight())
+			end
+
+			if #groupFrame.members > 0 then
+				accHeight = accHeight + ceil(#groupFrame.members / self.settings.memberColumns) * groupFrame.members[1]:GetHeight()
+			end
+		end
+	end
+
+	local _, member = next(self.members)
 	local left, top, right, bottom = self.wndMain:GetAnchorOffsets()
-	self.wndMain:SetAnchorOffsets(left, top, left + 2 * self.settings.padding + columns * (members[1]:GetWidth() + self.settings.memberSpaceBetween) - self.settings.memberSpaceBetween, top + 2 * self.settings.padding + min(self.settings.memberMaxRows, #members) * (members[1]:GetHeight() + self.settings.memberSpaceBetween) - self.settings.memberSpaceBetween + topPadding)
+	self.wndMain:SetAnchorOffsets(left, top, left + self.settings.memberColumns * (member and member:GetWidth() or 140), top + accHeight + self.settings.padding)
+end
+
+function VinceRaidFrames:BuildGroups()
+	local newGroups = {}
+	for i, group in ipairs(self.settings.groups) do
+		local groupFrame = self.groupFrames[group.name]
+		if not groupFrame then
+			local frame = ApolloLoadForm(self.xmlDoc, "Group", self.wndMain, self)
+			frame:FindChild("Name"):SetText(" " .. group.name)
+			frame:FindChild("Btn"):SetData(group.name)
+			groupFrame = {
+				frame = frame
+			}
+			frame:SetData(groupFrame)
+			self.groupFrames[group.name] = groupFrame
+		end
+		groupFrame.index = i
+		groupFrame.members = {}
+		newGroups[group.name] = true
+	end
+
+	for name, frame in pairs(self.groupFrames) do
+		if not newGroups[name] then
+			self.groupFrames[name].frame:Destroy()
+			self.groupFrames[name] = nil
+		end
+	end
+end
+
+function VinceRaidFrames:BuildMemberToGroupMap()
+	local map = {}
+	for i, group in ipairs(self.settings.groups) do
+		for j, name in ipairs(group.members) do
+			map[name] = group.name
+		end
+	end
+	return map
+end
+
+function VinceRaidFrames:MoveMemberToGroup(memberName, groupName)
+	self:RemoveMemberFromGroup(memberName)
+	self:AddMemberToGroup(memberName, groupName)
+	self:ArrangeMembers()
+end
+
+function VinceRaidFrames:AddMemberToGroup(memberName, groupName)
+	for i, group in ipairs(self.settings.groups) do
+		if group.name == groupName then
+			tinsert(group.members, memberName)
+			return
+		end
+	end
+end
+
+function VinceRaidFrames:RemoveMemberFromGroup(memberName)
+	for i, group in ipairs(self.settings.groups) do
+		for j, name in ipairs(group.members) do
+			if name == memberName then
+				table.remove(group.members, j)
+				return
+			end
+		end
+	end
+end
+
+function VinceRaidFrames:CreateDefaultGroups()
+	self.settings.groups = {
+		{
+			name = "Raid",
+			members = {}
+		}
+	}
+	for name, member in pairs(self.members) do
+		tinsert(self.settings.groups[1].members, name)
+	end
+end
+
+--function VinceRaidFrames:CreateDefaultGroups()
+--	local tanks = {
+--		name = "Tanks",
+--		members = {}
+--	}
+--	local healers = {
+--		name = "Healers",
+--		members = {}
+--	}
+--	local dps = {
+--		name = "DPS",
+--		members = {}
+--	}
+--	self.settings.groups = {tanks, healers, dps}
+--	for name, member in pairs(self.members) do
+--		tinsert(member.groupMember.bTank and tanks.members or (member.groupMember.bHealer and healers.members or dps.members), name)
+--	end
+--end
+
+function VinceRaidFrames:IsLeader()
+	return (GroupLib.InGroup() or GroupLib.InRaid()) and GroupLibGetGroupMember(1).bIsLeader
+end
+
+function VinceRaidFrames:ValidateGroups(groups)
+	if type(groups) ~= "table" or #groups < 1 then
+		return false
+	end
+	local groupNames = {}
+	for i, group in ipairs(groups) do
+		if type(group) ~= "table" or type(group.name) ~= "string" or type(group.members) ~= "table" then
+			return false
+		end
+		if groupNames[group.name] then
+			return false
+		else
+			groupNames[group.name] = true
+		end
+		for j, name in ipairs(group.members) do
+			if type(name) ~= "string" then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+function VinceRaidFrames:ShareGroupLayout()
+	self.channel:SendMessage(self.settings.groups)
+end
+
+function VinceRaidFrames:IsUniqueGroupName(name)
+	return not self.groupFrames[name]
+end
+
+function VinceRaidFrames:GetUniqueGroupName()
+	if not self.groupFrames.Raid then
+		return "Raid"
+	end
+	local i = 1
+	while true do
+		if not self.groupFrames["Raid" .. i] then
+			return "Raid" .. i
+		end
+		i = i + 1
+	end
+end
+
+--function VinceRaidFrames:OnICCommMessageReceived(channel, message)
+function VinceRaidFrames:OnICCommMessageReceived(...)
+	log("iccomm", {...}, 0)
+	local message = ({...})[2]
+	if self:ValidateGroups(message) then
+		self.settings.groups = message
+	end
+end
+
+function VinceRaidFrames:OnGroupToggle()
+	self:ArrangeMembers()
+end
+
+function VinceRaidFrames:OnGroupMouseBtnUp(wndHandler, wndControl, eMouseButton)
+	if self:IsLeader() and eMouseButton == GameLib.CodeEnumInputMouse.Right then
+		self.groupContextMenu:Show(wndHandler:GetParent():GetData().index)
+	end
+end
+
+function VinceRaidFrames:OnDragDrop(wndHandler, wndControl, nX, nY, wndSource, strType, iData)
+	self:MoveMemberToGroup(wndSource:GetData().name, wndHandler:GetData())
+end
+
+function VinceRaidFrames:OnQueryDragDrop(wndHandler, wndControl, nX, nY, wndSource, strType, iData)
+	if strType ~= "Member" then
+		return Apollo.DragDropQueryResult.Ignore
+	end
+	return Apollo.DragDropQueryResult.Accept
+end
+
+function VinceRaidFrames:OnGroupNameEditBoxClose(wndHandler, wndControl, strText)
+	self:OnGroupNameEditBoxReturn(wndHandler, wndControl, wndHandler:GetText())
+end
+function VinceRaidFrames:OnGroupNameEditBoxReturn(wndHandler, wndControl, strText)
+	if wndHandler:GetData().name == strText or self:IsUniqueGroupName(strText) then
+		wndHandler:Show(false, true)
+		wndHandler:GetParent():FindChild("Name"):Show(true, true)
+		wndHandler:GetData().name = strText
+		self:ShareGroupLayout()
+		self:ArrangeMembers()
+	else
+		wndHandler:Show(true, true)
+	end
 end
 
 function VinceRaidFrames:ArrangeMemberFrames()
@@ -471,26 +798,36 @@ function VinceRaidFrames:OnRaidMasterLootToggle(wndHandler, wndControl) -- RaidM
 end
 
 function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidConfigureBtn
-	if wndHandler:IsChecked() then
+	local checked = wndHandler:IsChecked()
+	if checked then
 		Event_FireGenericEvent("GenericEvent_Raid_ToggleMasterLoot", false)
 		Event_FireGenericEvent("GenericEvent_Raid_ToggleLeaderOptions", false)
 
 		self:UpdateRoleButtons()
 
-		for name, member in pairs(self.members) do
-			member:SetDraggable(true)
+		if self:IsLeader() then
+			self:MakeMembersDraggable(true)
 		end
+
+		local nLeft, nTop, nRight, nBottom = self.wndRaidOptions:GetAnchorOffsets()
+		self.wndRaidOptions:SetAnchorOffsets(nLeft, nTop, nRight, nTop + self.wndRaidOptions:ArrangeChildrenVert(0))
 	else
-		for name, member in pairs(self.members) do
-			member:SetDraggable(false)
-		end
+		self:MakeMembersDraggable(false)
+	end
+end
+
+function VinceRaidFrames:MakeMembersDraggable(value)
+	for name, member in pairs(self.members) do
+		member:SetDraggable(value)
 	end
 end
 
 function VinceRaidFrames:UpdateRoleButtons()
 	local groupMember = GroupLibGetGroupMember(1)
 	if groupMember and self.wndRaidOptions then
-		self.wndRaidOptions:FindChild("SelfConfigReadyCheckLabel"):Show(groupMember.bIsLeader or groupMember.bMainTank or groupMember.bMainAssist or groupMember.bRaidAssistant)
+		local lead = groupMember.bIsLeader or groupMember.bMainTank or groupMember.bMainAssist or groupMember.bRaidAssistant
+		self.wndRaidOptions:FindChild("SelfConfigReadyCheckLabel"):Show(lead)
+		self.wndRaidOptions:FindChild("RaidTools"):Show(lead)
 
 		self.wndSelfConfigSetAsDPS:SetCheck(groupMember.bDPS)
 		self.wndSelfConfigSetAsDPS:SetData(1)
@@ -498,9 +835,6 @@ function VinceRaidFrames:UpdateRoleButtons()
 		self.wndSelfConfigSetAsHealer:SetData(1)
 		self.wndSelfConfigSetAsNormTank:SetCheck(groupMember.bTank)
 		self.wndSelfConfigSetAsNormTank:SetData(1)
-
-		local nLeft, nTop, nRight, nBottom = self.wndRaidOptions:GetAnchorOffsets()
-		self.wndRaidOptions:SetAnchorOffsets(nLeft, nTop, nRight, nTop + self.wndRaidOptions:ArrangeChildrenVert(0))
 	end
 end
 
@@ -584,16 +918,53 @@ function VinceRaidFrames:OnUnitEnteredCombat(unit, bInCombat)
 	end
 end
 
+function VinceRaidFrames:OnGrantMarks()
+	for i = 2, GroupLibGetMemberCount() do
+		if not GroupLibGetGroupMember(i).bCanMark then
+			GroupLib.SetCanMark(i, true)
+		end
+	end
+end
+
+function VinceRaidFrames:OnRevokeMarks()
+	for i = 2, GroupLibGetMemberCount() do
+		if GroupLibGetGroupMember(i).bCanMark then
+			GroupLib.SetCanMark(i, false)
+		end
+	end
+end
+
+function VinceRaidFrames:OnClearMarks()
+	GameLib.ClearAllTargetMarkers()
+end
+
 function VinceRaidFrames:OnGroup_MemberFlagsChanged(...)
 	self:UpdateRoleButtons()
 	self:Show()
 end
 
-function VinceRaidFrames:OnGroup_Join(...)
+function VinceRaidFrames:OnGroup_MemberOrderChanged(...)
+	self:OnRefresh()
+	self:ArrangeMembers()
+end
+
+function VinceRaidFrames:OnGroup_Add(name)
+	tinsert(self.settings.groups[#self.settings.groups].members, name)
 	self:Show()
 end
 
-function VinceRaidFrames:OnGroup_Left(...)
+function VinceRaidFrames:OnGroup_Remove(name) -- someone leaves
+	self:RemoveMemberFromGroup(name)
+	self:Show()
+end
+
+function VinceRaidFrames:OnGroup_Join(...)
+	self.settings.groups = nil
+	self:Show()
+end
+
+function VinceRaidFrames:OnGroup_Left(...) -- player leaves
+	self.settings.groups = nil
 	self:Show()
 end
 
@@ -601,15 +972,7 @@ function VinceRaidFrames:OnGroup_Disbanded(...)
 	self:Show()
 end
 
-function VinceRaidFrames:OnGroup_Add(...)
-	self:Show()
-end
-
 function VinceRaidFrames:OnGroup_Changed(...)
-	self:Show()
-end
-
-function VinceRaidFrames:OnGroup_Remove(...)
 	self:Show()
 end
 

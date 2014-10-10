@@ -1,16 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<Addon APIVersion="9" Name="VinceRaidFrames" Version="0.5.1" Author="Pfeffervince@Ascendancy" Description="High performance Raid Frames including live interrupt indicators and reordering of group members.">
-	<Script Name="libs/GeminiLocale/GeminiLocale.lua"/>
+<Addon APIVersion="9" Name="VinceRaidFrames" Version="0.7" Author="Pfeffervince@Ascendancy" Description="High performance Raid Frames including live interrupt indicators and reordering of group members.">
+    <ReplaceAddon Name="RaidFrameBase"/>
+
+    <Script Name="libs/GeminiLocale/GeminiLocale.lua"/>
 	
 	<Script Name="locales/enUS.lua"/>
 	
 	<Form Name="VinceRaidFrames.xml"/>
 
+    <Script Name="ContextMenu.lua"/>
     <Script Name="ReadyCheck.lua"/>
     <Script Name="Options.lua"/>
     <Script Name="Member.lua"/>
 
     <Script Name="VinceRaidFrames.lua"/>
-
-    <ReplaceAddon Name="RaidFrameBase"/>
 </Addon>

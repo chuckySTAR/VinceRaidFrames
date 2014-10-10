@@ -54,9 +54,12 @@ function Options:Show(xmlDoc)
 		self.categoryGeneral = self.wndMain:FindChild("General")
 
 		self.categoryGeneral:SetCheck(true)
-
 		self:OnCategorySelect(self.categoryGeneral)
 		GeminiLocale:TranslateWindow(L, self.wndMain)
+
+		local title = self.wndMain:FindChild("Title")
+		title:SetText(title:GetText() .. " v" .. self:GetAddonVersion())
+
 		Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames Options"})
 	end
 end
@@ -64,10 +67,7 @@ end
 function Options:OnCategorySelect(wndHandler)
 	if self.activeCategory ~= wndHandler:GetName() then
 		self.activeCategory = wndHandler:GetName()
-		local children = self.content:GetChildren()
-		if #children > 0 then
-			children[1]:Destroy()
-		end
+		self.content:DestroyChildren()
 		local options = Apollo.LoadForm(self.xmlDoc, "Options" .. wndHandler:GetName(), self.content, self)
 		if options then
 			GeminiLocale:TranslateWindow(L, self.wndMain)
@@ -166,7 +166,6 @@ function Options:OnColorBy(wndHandler, wndControl)
 	self.parent:UpdateColorBy()
 end
 
---function Options:OnQueryBeginDragDrop(wndHandler, wndControl, nX, nY)
 function Options:OnQueryBeginDragDrop(wndHandler, wndControl, nX, nY)
 	SendVarToRover("QueryBeginDragDrop", {wndHandler, wndControl, nX, nY}, 0)
 	Apollo.BeginDragDrop(wndControl, "iwas", "Icon_SkillMind_UI_espr_rpls", 5)
@@ -214,6 +213,10 @@ function Options:UpdateSliderWidget(wndHandler, value)
 	end
 	parent:FindChild("Slider"):SetValue(value)
 	return value
+end
+
+function Options:GetAddonVersion()
+	return XmlDoc.CreateFromFile("toc.xml"):ToTable().Version
 end
 
 

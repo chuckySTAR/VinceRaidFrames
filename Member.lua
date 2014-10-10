@@ -43,13 +43,17 @@ Member.__index = Member
 function Member:OnLoad()
 	self.previousTarget = nil
 end
-function Member:new(unit, groupMember, settings, parent, xmlDoc)
+function Member:new(unit, groupMember, parent)
 	local o = {
 		unit = unit,
+		name = groupMember and groupMember.strCharacterName or unit:GetName(),
 		groupMember = groupMember,
 		readyCheckMode = false,
-		frame = Apollo.LoadForm(xmlDoc, "Member", parent, self),
-		settings = settings,
+		frame = nil,
+		draggable = false,
+		parent = parent,
+		xmlDoc = parent.xmlDoc,
+		settings = parent.settings,
 		classId = groupMember and groupMember.eClassId or unit:GetClassId(),
 		classColor = nil,
 		classIconPixie = nil,
@@ -65,38 +69,47 @@ function Member:new(unit, groupMember, settings, parent, xmlDoc)
 		timer = nil,
 		outOfRange = false,
 		dead = false,
-		online = true
+		online = true,
+		targeted = false,
+		hovered = false
 	}
-    setmetatable(o, self)
+	setmetatable(o, self)
 
-	o.classColor = settings.classColors[o.classId]
+	o:Init(parent.wndMain)
 
-	o.memberOverlay = o.frame:FindChild("MemberOverlay")
-	o.container = o.frame:FindChild("Container")
-	o.overlay = o.frame:FindChild("Overlay")
-	o.healthOverlay = o.frame:FindChild("HealthOverlay")
-	o.health = o.frame:FindChild("HealthBar")
-	o.shield = o.frame:FindChild("ShieldBar")
-	o.absorb = o.frame:FindChild("AbsorbBar")
-	o.flash = o.frame:FindChild("Flash")
-	o.text = o.frame:FindChild("Text")
-
-	o:Arrange()
-	o:ShowClassIcon(settings.memberShowClassIcon)
-
-	o.text:SetText(groupMember and groupMember.strCharacterName or unit:GetName())
-	o.text:SetFont(settings.memberFont)
-	o:SetNameColor(settings.memberColor)
-
-	o.frame:SetData(o)
-	o.flash:Show(false, true)
---	o:SetReadyCheckMode()
-	o:UnsetReadyCheckMode()
-	o:Refresh(false, unit, groupMember)
-	
-	-- Bug: SetTarget() isn't updated on reloadui
-	
 	return o
+end
+
+function Member:Init(parent)
+	self.frame = Apollo.LoadForm(self.xmlDoc, "Member", parent, Member)
+
+	self.classColor = self.settings.classColors[self.classId]
+
+	self.memberOverlay = self.frame:FindChild("MemberOverlay")
+	self.container = self.frame:FindChild("Container")
+	self.overlay = self.frame:FindChild("Overlay")
+	self.healthOverlay = self.frame:FindChild("HealthOverlay")
+	self.health = self.frame:FindChild("HealthBar")
+	self.shield = self.frame:FindChild("ShieldBar")
+	self.absorb = self.frame:FindChild("AbsorbBar")
+	self.flash = self.frame:FindChild("Flash")
+	self.text = self.frame:FindChild("Text")
+
+	self:Arrange()
+	self:ShowClassIcon(self.settings.memberShowClassIcon)
+
+	self.text:SetText(self.name)
+	self.text:SetFont(self.settings.memberFont)
+	self:SetNameColor(self.settings.memberColor)
+
+	self.frame:SetData(self)
+	self.container:SetData(self)
+	self.flash:Show(false, true)
+	--	o:SetReadyCheckMode()
+	self:UnsetReadyCheckMode()
+	self:Refresh(false, self.unit, self.groupMember)
+
+	-- Bug: SetTarget() isn't updated on reloadui
 end
 
 function Member:GetWidth()
@@ -191,7 +204,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		shield = groupMember.nShield / groupMember.nShieldMax
 		absorb = groupMember.nAbsorptionMax == 0 and 0 or groupMember.nAbsorption / groupMember.nAbsorptionMax
 
-		self.outOfRange = groupMember.nHealthMax == 0 or not unit
+		self.outOfRange = groupMember.nHealthMax == 0 or not unit or not unit:IsValid()
 		self.dead = groupMember.nHealth == 0 and groupMember.nHealthMax ~= 0
 		self.online = groupMember.bIsOnline
 	else
@@ -213,9 +226,9 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 
 	self:RefreshNameColor()
 
-	if self.settings.colorBy == ColorByHealth then
-		self:SetHealthColor(self.GetColorBetween(self.settings.memberLowHealthColor, self.settings.memberHighHealthColor, health))
-	end
+--	if not readyCheckMode and self.settings.colorBy == ColorByHealth then
+--		self:SetHealthColor(self.GetColorBetween(self.settings.memberLowHealthColor, self.settings.memberHighHealthColor, health))
+--	end
 
     if self.settings.memberFillLeftToRight then
 		self.health:SetAnchorPoints(0, 0, health, 1)
@@ -322,7 +335,7 @@ function Member:UnsetReadyCheckMode()
 end
 
 function Member:GetBuffIconOffsets(position)
-	return -(position + 1) * self.settings.memberIconSizes - 1 -3 * position, -self.settings.memberIconSizes / 2, -position * self.settings.memberIconSizes - 1 -3 * position, self.settings.memberIconSizes / 2
+	return -(position + 1) * self.settings.memberIconSizes - 1 -2 * position, -self.settings.memberIconSizes / 2, -position * self.settings.memberIconSizes - 1 -2 * position, self.settings.memberIconSizes / 2
 end
 
 function Member:AddPotion(sprite)
@@ -398,7 +411,7 @@ function Member:RemoveFood()
 end
 
 function Member:SetDraggable(draggable)
-
+	self.draggable = draggable
 end
 
 function Member:Interrupted(amount)
@@ -410,23 +423,29 @@ function Member:Interrupted(amount)
 	self.flash:Show(true, true)
 end
 
+function Member:UpdateHealthAlpha()
+	if self.targeted then
+		self:SetHealthAlpha("2x:bb")
+	elseif self.hovered then
+		self:SetHealthAlpha("2x:88")
+	else
+		self:SetHealthAlpha("ff")
+	end
+end
+
 function Member:SetTarget()
 	self.targeted = true
-	self:SetHealthAlpha("2x:bb")
-	-- self.frame:SetBGColor("bbffffff")
+	self:UpdateHealthAlpha()
 end
 
 function Member:UnsetTarget()
 	self.targeted = false
-	self:SetHealthAlpha("ff")
-	-- self:RestoreLastHealthAlpha()
-	-- self.frame:SetBGColor("ff000000")
+	self:UpdateHealthAlpha()
 end
 
-function Member:SetHealthColor(color, alpha)
+function Member:SetHealthColor(color)
 	self.lastHealthColor = color
-	self.lastHealthAlpha = alpha or "ff"
-	self.health:SetBGColor(self.lastHealthAlpha .. color)
+	self.health:SetBGColor((self.lastHealthAlpha or "ff") .. color)
 end
 
 function Member:SetHealthAlpha(alpha)
@@ -434,8 +453,23 @@ function Member:SetHealthAlpha(alpha)
 	self.health:SetBGColor(alpha .. self.lastHealthColor)
 end
 
-function Member:RestoreLastHealthAlpha()
-	self:SetHealthColor(self.lastHealthColor, self.lastHealthAlpha)
+function Member:OnDragDrop(wndHandler, wndControl, nX, nY, wndSource, strType, iData)
+	GroupLib.SwapOrder(wndHandler:GetData().groupMember.nMemberIdx, wndSource:GetData().groupMember.nMemberIdx)
+end
+
+function Member:OnQueryDragDrop(wndHandler, wndControl, nX, nY, wndSource, strType, iData)
+	if strType ~= "Member" then
+		return Apollo.DragDropQueryResult.Ignore
+	end
+	return Apollo.DragDropQueryResult.Accept
+end
+
+function Member:OnQueryBeginDragDrop(wndHandler, wndControl, nX, nY)
+	if wndHandler:GetData().draggable then
+		Apollo.BeginDragDrop(wndControl, "Member", "sprResourceBar_Sprint_RunIconSilver", 0)
+		return true
+	end
+	return false
 end
 
 function Member:OnMemberClick(wndHandler, wndControl, eMouseButton)
@@ -456,17 +490,16 @@ function Member:OnMouseEnter(wndHandler, wndControl)
 	if wndHandler ~= wndControl or not wndHandler then
 		return
 	end
-	local data = wndHandler:GetData()
-	if not data.targeted then
-		data:SetHealthAlpha("2x:88")
-	end
-	if data.unit then
-		if data.settings.hintArrowOnHover then
-			data.unit:ShowHintArrow()
+	self = wndHandler:GetData()
+	self.hovered = true
+	self:UpdateHealthAlpha()
+	if self.unit then
+		if self.settings.hintArrowOnHover then
+			self.unit:ShowHintArrow()
 		end
-		if data.settings.targetOnHover then
+		if self.settings.targetOnHover then
 			self.previousTarget = GameLib.GetPlayerUnit():GetTarget()
-			GameLib.SetTargetUnit(data.unit)
+			GameLib.SetTargetUnit(self.unit)
 		end
 	end
 end
@@ -475,11 +508,9 @@ function Member:OnMouseExit(wndHandler, wndControl)
 	if wndHandler ~= wndControl or not wndHandler then
 		return
 	end
-	local data = wndHandler:GetData()
-	if not data.targeted then
-		data:SetHealthAlpha("ff")
-		-- data:RestoreLastHealthAlpha()
-	end
+	self = wndHandler:GetData()
+	self.hovered = false
+	self:UpdateHealthAlpha()
 	if data.settings.targetOnHover then
 		GameLib.SetTargetUnit(self.previousTarget)
 	end
@@ -494,6 +525,14 @@ end
 
 function Member:OnInterruptedEnd()
 	self.flash:Show(false)
+end
+
+function Member:Hide()
+	self.frame:Show(false, false)
+end
+
+function Member:Show()
+	self.frame:Show(true, false)
 end
 
 function Member:Destroy()
