@@ -660,7 +660,7 @@ end
 function VinceRaidFrames:IsLeader(name)
 	for i = 1, GroupLibGetMemberCount() do
 		local member = GroupLibGetGroupMember(i)
-		if member == name and member.bIsLeader then
+		if member.strCharacterName == name and member.bIsLeader then
 			return true
 		end
 	end
