@@ -77,10 +77,10 @@ function Options:OnCategorySelect(wndHandler)
 					self.settings.refreshInterval = value
 					self.parent.timer:Set(value)
 				end)
-				self.maxRowsSliderWidget = self:InitSliderWidget(options:FindChild("MaxRows"), self.maxRowsMin, self.maxRowsMax, self.maxRowsTick, self.settings.memberMaxRows, 0, function (value)
-					self.settings.memberMaxRows = value
-					self.parent:ArrangeMembers()
-				end)
+--				self.maxRowsSliderWidget = self:InitSliderWidget(options:FindChild("MaxRows"), self.maxRowsMin, self.maxRowsMax, self.maxRowsTick, self.settings.memberMaxRows, 0, function (value)
+--					self.settings.memberMaxRows = value
+--					self.parent:ArrangeMembers()
+--				end)
 				options:FindChild("SortByClass"):SetData(1)
 				options:FindChild("SortByRole"):SetData(2)
 				options:FindChild("SortByName"):SetData(3)
