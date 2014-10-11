@@ -634,10 +634,6 @@ end
 --	end
 --end
 
-function VinceRaidFrames:IsLeader()
-	return (GroupLib.InGroup() or GroupLib.InRaid()) and GroupLibGetGroupMember(1).bIsLeader
-end
-
 function VinceRaidFrames:ValidateGroups(groups)
 	if type(groups) ~= "table" or #groups < 1 then
 		return false
@@ -663,7 +659,8 @@ end
 
 function VinceRaidFrames:IsLeader(name)
 	for i = 1, GroupLibGetMemberCount() do
-		if GroupLibGetGroupMember(i).bIsLeader then
+		local member = GroupLibGetGroupMember(i)
+		if member == name and member.bIsLeader then
 			return true
 		end
 	end
@@ -704,7 +701,7 @@ function VinceRaidFrames:OnGroupToggle()
 end
 
 function VinceRaidFrames:OnGroupMouseBtnUp(wndHandler, wndControl, eMouseButton)
-	if self:IsLeader() and eMouseButton == GameLib.CodeEnumInputMouse.Right then
+	if GroupLib.AmILeader() and eMouseButton == GameLib.CodeEnumInputMouse.Right then
 		self.groupContextMenu:Show(wndHandler:GetParent():GetData().index)
 	end
 end
@@ -814,7 +811,7 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 
 		self:UpdateRoleButtons()
 
-		if self:IsLeader() then
+		if GroupLib.AmILeader() then
 			self:MakeMembersDraggable(true)
 		end
 
