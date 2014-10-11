@@ -711,6 +711,7 @@ end
 
 function VinceRaidFrames:OnDragDrop(wndHandler, wndControl, nX, nY, wndSource, strType, iData)
 	self:MoveMemberToGroup(wndSource:GetData().name, wndHandler:GetData())
+	self:ShareGroupLayout()
 end
 
 function VinceRaidFrames:OnQueryDragDrop(wndHandler, wndControl, nX, nY, wndSource, strType, iData)
