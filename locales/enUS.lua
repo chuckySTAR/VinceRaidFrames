@@ -4,4 +4,4 @@ if not L then
 end
 
 L["Refresh Interval (s)"] = "Refresh Interval (s)"
-L["Max Rows"] = "Max Rows"
+L["Columns"] = "Columns"

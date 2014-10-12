@@ -87,7 +87,6 @@ function VinceRaidFrames:new(o)
 		memberOfflineTextColor = {a = 1, r = .1, g = .1, b = .1},
 		memberDeadTextColor = {a = 1, r = .5, g = .5, b = .5},
 		memberAggroTextColor = {a = 1, r = .86, g = .28, b = .28},
-		memberBorderColor = "ff111111",
 		memberLowHealthColor = {r = 1, g = 0, b = 0},
 		memberHighHealthColor = {r = 0, g = 1, b = 0},
 		memberShowClassIcon = false,
@@ -491,10 +490,14 @@ function VinceRaidFrames.SortByClass(a, b)
 end
 
 function VinceRaidFrames:ArrangeMembers()
+	if not GroupLib.InGroup() then
+		return
+	end
 	if not self.settings.groups then
 		self:CreateDefaultGroups()
 	end
 
+	self:NormalizeGroups()
 	self:BuildGroups()
 
 	local lastGroup = self.settings.groups[#self.settings.groups].name
@@ -577,6 +580,33 @@ function VinceRaidFrames:BuildMemberToGroupMap()
 	return map
 end
 
+-- rename same groups, remove members who are in more than one group, add missing members
+function VinceRaidFrames:NormalizeGroups()
+	local members = {}
+	local groupNames = {}
+	for i, group in ipairs(self.settings.groups) do
+		if groupNames[group.name] then
+			group.name = self:GetUniqueGroupName()
+		else
+			groupNames[group.name] = true
+		end
+
+		for j = #group.members, 1, -1 do
+			if members[group.members[j]] then
+				table.remove(group.members, j)
+			else
+				members[group.members[j]] = true
+			end
+		end
+	end
+
+	for name, member in pairs(self.members) do
+		if not members[name] then
+			tinsert(self.settings.groups[#self.settings.groups].members, name)
+		end
+	end
+end
+
 function VinceRaidFrames:MoveMemberToGroup(memberName, groupName)
 	self:RemoveMemberFromGroup(memberName)
 	self:AddMemberToGroup(memberName, groupName)
@@ -638,15 +668,9 @@ function VinceRaidFrames:ValidateGroups(groups)
 	if type(groups) ~= "table" or #groups < 1 then
 		return false
 	end
-	local groupNames = {}
 	for i, group in ipairs(groups) do
 		if type(group) ~= "table" or type(group.name) ~= "string" or type(group.members) ~= "table" then
 			return false
-		end
-		if groupNames[group.name] then
-			return false
-		else
-			groupNames[group.name] = true
 		end
 		for j, name in ipairs(group.members) do
 			if type(name) ~= "string" then
@@ -676,12 +700,17 @@ function VinceRaidFrames:IsUniqueGroupName(name)
 end
 
 function VinceRaidFrames:GetUniqueGroupName()
-	if not self.groupFrames.Raid then
+	local groupNames = {}
+	for i, group in ipairs(self.settings.groups) do
+		groupNames[group.name] = true
+	end
+
+	if not groupNames.Raid then
 		return "Raid"
 	end
 	local i = 1
 	while true do
-		if not self.groupFrames["Raid" .. i] then
+		if not groupNames["Raid" .. i] then
 			return "Raid" .. i
 		end
 		i = i + 1

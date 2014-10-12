@@ -28,9 +28,9 @@ function Options:OnLoad()
 	self.refreshIntervalMax = 2
 	self.refreshIntervalTick = .1
 
-	self.maxRowsMin = 1
-	self.maxRowsMax = 40
-	self.maxRowsTick = 1
+	self.memberColumnsMin = 1
+	self.memberColumnsMax = 10
+	self.memberColumnsTick = 1
 
 	self.memberHeightMin = 5
 	self.memberHeightMax = 100
@@ -39,6 +39,23 @@ function Options:OnLoad()
 	self.memberWidthMin = 20
 	self.memberWidthMax = 200
 	self.memberWidthTick = 1
+
+
+	self.memberShieldWidthMin = 1
+	self.memberShieldWidthMax = 50
+	self.memberShieldWidthTick = 1
+
+	self.memberAbsorbWidthMin = 1
+	self.memberAbsorbWidthMax = 50
+	self.memberAbsorbWidthTick = 1
+
+	self.memberShieldHeightMin = 1
+	self.memberShieldHeightMax = 30
+	self.memberShieldHeightTick = 1
+
+	self.memberAbsorbHeightMin = 1
+	self.memberAbsorbHeightMax = 30
+	self.memberAbsorbHeightTick = 1
 end
 
 function Options:Show(xmlDoc)
@@ -69,6 +86,7 @@ function Options:OnCategorySelect(wndHandler)
 		self.activeCategory = wndHandler:GetName()
 		self.content:DestroyChildren()
 		local options = Apollo.LoadForm(self.xmlDoc, "Options" .. wndHandler:GetName(), self.content, self)
+		self.options = options
 		if options then
 			GeminiLocale:TranslateWindow(L, self.wndMain)
 
@@ -77,10 +95,10 @@ function Options:OnCategorySelect(wndHandler)
 					self.settings.refreshInterval = value
 					self.parent.timer:Set(value)
 				end)
---				self.maxRowsSliderWidget = self:InitSliderWidget(options:FindChild("MaxRows"), self.maxRowsMin, self.maxRowsMax, self.maxRowsTick, self.settings.memberMaxRows, 0, function (value)
---					self.settings.memberMaxRows = value
---					self.parent:ArrangeMembers()
---				end)
+				self.memberColumnsSliderWidget = self:InitSliderWidget(options:FindChild("Columns"), self.memberColumnsMin, self.memberColumnsMax, self.memberColumnsTick, self.settings.memberColumns, 0, function (value)
+					self.settings.memberColumns = value
+					self.parent:ArrangeMembers()
+				end)
 				options:FindChild("SortByClass"):SetData(1)
 				options:FindChild("SortByRole"):SetData(2)
 				options:FindChild("SortByName"):SetData(3)
@@ -95,6 +113,11 @@ function Options:OnCategorySelect(wndHandler)
 				options:FindChild("ClassIcon"):SetCheck(self.settings.memberShowClassIcon)
 				options:FindChild("TargetOnHover"):SetCheck(self.settings.targetOnHover)
 				options:FindChild("HintArrowOnHover"):SetCheck(self.settings.hintArrowOnHover)
+				options:FindChild("FixedShieldLength"):SetCheck(true)
+				options:FindChild("FixedShieldLength"):Enable(false)
+
+				self:ToggleShieldWidthHeight()
+
 				self.memberHeight = self:InitSliderWidget(options:FindChild("Height"), self.memberHeightMin, self.memberHeightMax, self.memberHeightTick, self.settings.memberHeight, 0, function (value)
 					self.settings.memberHeight = value
 					self.parent:ArrangeMemberFrames()
@@ -102,6 +125,29 @@ function Options:OnCategorySelect(wndHandler)
 				end)
 				self.memberWidth = self:InitSliderWidget(options:FindChild("Width"), self.memberWidthMin, self.memberWidthMax, self.memberWidthTick, self.settings.memberWidth, 0, function (value)
 					self.settings.memberWidth = value
+					self.parent:ArrangeMemberFrames()
+					self.parent:ArrangeMembers()
+				end)
+
+
+				self.memberShieldWidth = self:InitSliderWidget(options:FindChild("ShieldWidth"), self.memberShieldWidthMin, self.memberShieldWidthMax, self.memberShieldWidthTick, self.settings.memberShieldWidth, 0, function (value)
+					self.settings.memberShieldWidth = value
+					self.parent:ArrangeMemberFrames()
+					self.parent:ArrangeMembers()
+				end)
+				self.memberAbsorbWidth = self:InitSliderWidget(options:FindChild("AbsorbWidth"), self.memberAbsorbWidthMin, self.memberAbsorbWidthMax, self.memberAbsorbWidthTick, self.settings.memberAbsorbWidth, 0, function (value)
+					self.settings.memberAbsorbWidth = value
+					self.parent:ArrangeMemberFrames()
+					self.parent:ArrangeMembers()
+				end)
+
+				self.memberShieldHeight = self:InitSliderWidget(options:FindChild("ShieldHeight"), self.memberShieldHeightMin, self.memberShieldHeightMax, self.memberShieldHeightTick, self.settings.memberShieldHeight, 0, function (value)
+					self.settings.memberShieldHeight = value
+					self.parent:ArrangeMemberFrames()
+					self.parent:ArrangeMembers()
+				end)
+				self.memberAbsorbHeight = self:InitSliderWidget(options:FindChild("AbsorbHeight"), self.memberAbsorbHeightMin, self.memberAbsorbHeightMax, self.memberAbsorbHeightTick, self.settings.memberAbsorbHeight, 0, function (value)
+					self.settings.memberAbsorbHeight = value
 					self.parent:ArrangeMemberFrames()
 					self.parent:ArrangeMembers()
 				end)
@@ -152,8 +198,25 @@ end
 
 function Options:OnShieldsBelowHealth(wndHandler, wndControl)
 	self.settings.memberShieldsBelowHealth = wndControl:IsChecked()
+
+	self:ToggleShieldWidthHeight()
+
 	self.parent:ArrangeMemberFrames()
 	self.parent:ArrangeMembers()
+end
+
+function Options:ToggleShieldWidthHeight()
+	if self.settings.memberShieldsBelowHealth then
+		self.options:FindChild("ShieldHeight"):Show(true, true)
+		self.options:FindChild("AbsorbHeight"):Show(true, true)
+		self.options:FindChild("ShieldWidth"):Show(false, true)
+		self.options:FindChild("AbsorbWidth"):Show(false, true)
+	else
+		self.options:FindChild("ShieldWidth"):Show(true, true)
+		self.options:FindChild("AbsorbWidth"):Show(true, true)
+		self.options:FindChild("ShieldHeight"):Show(false, true)
+		self.options:FindChild("AbsorbHeight"):Show(false, true)
+	end
 end
 
 function Options:OnSortBy(wndHandler, wndControl)
@@ -165,22 +228,6 @@ function Options:OnColorBy(wndHandler, wndControl)
 	self.settings.colorBy = wndControl:GetData()
 	self.parent:UpdateColorBy()
 end
-
-function Options:OnQueryBeginDragDrop(wndHandler, wndControl, nX, nY)
-	SendVarToRover("QueryBeginDragDrop", {wndHandler, wndControl, nX, nY}, 0)
-	Apollo.BeginDragDrop(wndControl, "iwas", "Icon_SkillMind_UI_espr_rpls", 5)
-	return true
-end
-
-function Options:OnDragDrop(...)
-	SendVarToRover("OnDragDrop", {...}, 0)
-end
-
-function Options:OnQueryDragDrop(...)
-	SendVarToRover("OnQueryDragDrop", {...}, 0)
-	return Apollo.DragDropQueryResult.Accept
-end
-
 
 function Options:InitSliderWidget(frame, min, max, tick, value, roundDigits, callback)
 	frame:SetData({
