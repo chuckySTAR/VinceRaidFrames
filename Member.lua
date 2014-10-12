@@ -511,7 +511,7 @@ function Member:OnMouseExit(wndHandler, wndControl)
 	self = wndHandler:GetData()
 	self.hovered = false
 	self:UpdateHealthAlpha()
-	if data.settings.targetOnHover then
+	if self.settings.targetOnHover then
 		GameLib.SetTargetUnit(self.previousTarget)
 	end
 end
