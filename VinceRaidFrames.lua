@@ -844,7 +844,9 @@ end
 function VinceRaidFrames:OnMasterLootUpdate()
 	local tMasterLoot = GameLib.GetMasterLoot()
 	local bShowMasterLoot = tMasterLoot and #tMasterLoot > 0
-	self.wndGroupBagBtn:Show(bShowMasterLoot)
+	if self.wndGroupBagBtn then
+		self.wndGroupBagBtn:Show(bShowMasterLoot)
+	end
 end
 
 function VinceRaidFrames:OnRaidLeaderOptionsToggle(wndHandler, wndControl) -- RaidLeaderOptionsBtn
