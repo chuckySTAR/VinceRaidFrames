@@ -1,3 +1,5 @@
+local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
+
 local setmetatable = setmetatable
 local ipairs = ipairs
 local abs = math.abs
@@ -84,6 +86,8 @@ function Member:Init(parent)
 	self.frame = Apollo.LoadForm(self.xmlDoc, "Member", parent, Member)
 
 	self.classColor = self.settings.classColors[self.classId]
+	self.lowHealthColor = {Utilities.RGB2HSV(self.settings.memberLowHealthColor.r, self.settings.memberLowHealthColor.g, self.settings.memberLowHealthColor.b)}
+	self.highHealthColor = {Utilities.RGB2HSV(self.settings.memberHighHealthColor.r, self.settings.memberHighHealthColor.g, self.settings.memberHighHealthColor.b)}
 
 	self.memberOverlay = self.frame:FindChild("MemberOverlay")
 	self.container = self.frame:FindChild("Container")
@@ -184,8 +188,8 @@ end
 function Member:UpdateColorBy(color)
 	if color == ColorByClass and not self.readyCheckMode then
 		self:SetHealthColor(self.classColor)
---	elseif color == ColorByHealth then
---		self:Refresh()
+	elseif color == ColorByHealth then
+		self:Refresh(self.readyCheckMode, nil, self.groupMember)
 	end
 end
 
@@ -217,7 +221,6 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		self.online = true
 	end
 
-	-- Todo: Remember last status in order to optimse useless function calls
 	if self.outOfRange and not self.dead and self.online then
 		self.frame:SetOpacity(self.settings.memberOutOfRangeOpacity, 5)
 	else
@@ -225,10 +228,11 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	end
 
 	self:RefreshNameColor()
+	self:RefreshTargetMarker(unit)
 
---	if not readyCheckMode and self.settings.colorBy == ColorByHealth then
---		self:SetHealthColor(self.GetColorBetween(self.settings.memberLowHealthColor, self.settings.memberHighHealthColor, health))
---	end
+	if not readyCheckMode and self.settings.colorBy == ColorByHealth then
+		self:SetHealthColor(Utilities.GetColorBetween(self.lowHealthColor, self.highHealthColor, health))
+	end
 
     if self.settings.memberFillLeftToRight then
 		self.health:SetAnchorPoints(0, 0, health, 1)
@@ -239,7 +243,22 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		self.shield:SetAnchorPoints(0, 0, 1 - shield, 1)
 		self.absorb:SetAnchorPoints(0, 0, 1 - absorb, 1)
 	end
+	
+	if readyCheckMode then
+		self:RefreshBuffIcons()
+		if groupMember and groupMember.bHasSetReady then
+			if not groupMember.bReady then
+				self:SetHealthColor("ff0000")
+			elseif not self.potionPixie or not self.foodPixie then
+				self:SetHealthColor("ffff00")
+			else
+				self:SetHealthColor("00ff00")
+			end
+		end
+	end
+end
 
+function Member:RefreshTargetMarker(unit)
 	if unit and self.settings.memberShowTargetMarker then
 		local sprite = tTargetMarkSpriteMap[unit:GetTargetMarker()]
 		if sprite then
@@ -259,20 +278,6 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		self.memberOverlay:DestroyPixie(self.targetMarkerPixie)
 		self.targetMarkerPixie = nil
 		self.targetMarkerSprite = ""
-	end
-
-	
-	if readyCheckMode then
-		self:RefreshBuffIcons()
-		if groupMember and groupMember.bHasSetReady then
-			if not groupMember.bReady then
-				self:SetHealthColor("ff0000")
-			elseif not self.potionPixie or not self.foodPixie then
-				self:SetHealthColor("ffff00")
-			else
-				self:SetHealthColor("00ff00")
-			end
-		end
 	end
 end
 
@@ -328,7 +333,8 @@ function Member:SetReadyCheckMode()
 end
 
 function Member:UnsetReadyCheckMode()
-	self:SetHealthColor(self.classColor)
+	self.readyCheckMode = false
+	self:UpdateColorBy(self.settings.colorBy)
 	
 	self:RemovePotion()
 	self:RemoveFood()
@@ -410,10 +416,6 @@ function Member:RemoveFood()
 	end
 end
 
-function Member:SetDraggable(draggable)
-	self.draggable = draggable
-end
-
 function Member:Interrupted(amount)
 	if self.timer then
 		self.timer:Start()
@@ -465,7 +467,7 @@ function Member:OnQueryDragDrop(wndHandler, wndControl, nX, nY, wndSource, strTy
 end
 
 function Member:OnQueryBeginDragDrop(wndHandler, wndControl, nX, nY)
-	if wndHandler:GetData().draggable then
+	if wndHandler:GetData().parent.editMode then
 		Apollo.BeginDragDrop(wndControl, "Member", "sprResourceBar_Sprint_RunIconSilver", 0)
 		return true
 	end
@@ -476,13 +478,13 @@ function Member:OnMemberClick(wndHandler, wndControl, eMouseButton)
 	if wndHandler ~= wndControl or not wndHandler then
 		return
 	end
-	local data = wndHandler:GetData()
-	if data.unit then
-		self.previousTarget = data.unit
-		GameLib.SetTargetUnit(data.unit)
+	self = wndHandler:GetData()
+	if self.unit then
+		self.previousTarget = self.unit
+		GameLib.SetTargetUnit(self.unit)
 	end
 	if eMouseButton == GameLib.CodeEnumInputMouse.Right then
-		Event_FireGenericEvent("GenericEvent_NewContextMenuPlayerDetailed", data.frame, data.unit and data.unit:GetName() or data.groupMember.strCharacterName, data.unit)
+		Event_FireGenericEvent("GenericEvent_NewContextMenuPlayerDetailed", self.frame, self.name, self.unit)
 	end
 end
 
@@ -537,15 +539,6 @@ end
 
 function Member:Destroy()
 	self.frame:Destroy()
-end
-
-function Member.round(num, digits)
-	local mult = 10^(digits or 0)
-	return floor(num * mult + .5) / mult
-end
-
-function Member.GetColorBetween(from, to, position)
-	return ("%02X%02X%02X"):format(((to.r - from.r) * position + from.r) * 255, ((to.g - from.g) * position + from.g) * 255, ((to.b - from.b) * position + from.b) * 255)
 end
 
 Apollo.RegisterPackage(Member, "Vince:VRF:Member-1", 1, {})

@@ -14,6 +14,7 @@ local Options = Apollo.GetPackage("Vince:VRF:Options-1").tPackage
 local ReadyCheck = Apollo.GetPackage("Vince:VRF:ReadyCheck-1").tPackage
 local Member = Apollo.GetPackage("Vince:VRF:Member-1").tPackage
 local ContextMenu = Apollo.GetPackage("Vince:VRF:ContextMenu-1").tPackage
+local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
 
 local pairs = pairs
 local ipairs = ipairs
@@ -57,7 +58,9 @@ function VinceRaidFrames:new(o)
 	o.members = {}
 	o.mobsInCombat = {}
 	o.groupFrames = {}
-	
+	o.leader = ""
+	o.editMode = false -- dragndrop of members
+
 	o.defaultSettings = {
 		classColors = {
 			[GameLib.CodeEnumClass.Warrior] = "F54F4F",
@@ -108,7 +111,8 @@ function VinceRaidFrames:new(o)
 		padding = 5,
 		groups = nil,
 		refreshInterval = .3,
-		interruptFlashDuration = 2.5
+		interruptFlashDuration = 2.5,
+		locked = false
 	}
 	o.settings = setmetatable({}, {__index = o.defaultSettings})
 
@@ -166,7 +170,7 @@ function VinceRaidFrames:OnLoadForReal()
 	self.timer = ApolloTimer.Create(self.settings.refreshInterval, true, "OnRefresh", self)
 	self.timer:Stop()
 
-	if GroupLib.InGroup() or GroupLib.InRaid() then
+	if GroupLib.InGroup() then
 		self:Show()
 	end
 
@@ -190,10 +194,9 @@ end
 
 function VinceRaidFrames:Show()
 	if self.wndMain then
-		self.wndMain:Invoke()
-		self:OnMasterLootUpdate()
-
-		if GroupLib.InGroup() or GroupLib.InRaid() then
+		if GroupLib.InGroup() then
+			self.wndMain:Invoke()
+			self:OnMasterLootUpdate()
 			self:BuildMembers()
 			self.timer:Start()
 		else
@@ -213,14 +216,20 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	self.wndRaidLeaderOptionsBtn = self.wndMain:FindChild("RaidLeaderOptionsBtn")
 	self.wndRaidLeaderOptionsBtn = self.wndMain:FindChild("RaidLeaderOptionsBtn")
 	self.wndRaidMasterLootBtn = self.wndMain:FindChild("RaidMasterLootBtn")
+	self.wndRaidLockFrameBtn = self.wndMain:FindChild("RaidLockFrameBtn")
 	self.wndRaidOptions = self.wndMain:FindChild("RaidOptions")
+	self.wndTitleText = self.wndMain:FindChild("TitleText")
 	self.wndMain:FindChild("RaidConfigureBtn"):AttachWindow(self.wndMain:FindChild("RaidOptions"))
 
 	self.wndSelfConfigSetAsDPS = self.wndRaidOptions:FindChild("SelfConfigSetAsDPS")
 	self.wndSelfConfigSetAsHealer = self.wndRaidOptions:FindChild("SelfConfigSetAsHealer")
 	self.wndSelfConfigSetAsNormTank = self.wndRaidOptions:FindChild("SelfConfigSetAsNormTank")
 
+	self.wndRaidLockFrameBtn:SetCheck(self.settings.locked)
+
+
 	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
+	self.channel:SendMessage({version = Utilities.GetAddonVersion()})
 
 	self.groupContextMenu = ContextMenu:new(self.xmlDoc, {
 		{
@@ -330,7 +339,9 @@ function VinceRaidFrames:OnDocLoaded_Main()
 			end
 		}
 	})
-	
+
+	self:UpdateLocks()
+
 	self:Show()
 end
 
@@ -397,27 +408,33 @@ function VinceRaidFrames:OnTargetUnitChanged(unit)
 end
 
 function VinceRaidFrames:OnRefresh()
+	local online = 0
 	local count = GroupLibGetMemberCount()
 	for i = 1, count do
 		local unit = GroupLibGetUnitForGroupMember(i)
 		local groupMember = GroupLibGetGroupMember(i)
 		local member = self.members[groupMember and groupMember.strCharacterName or (unit and unit:GetName())]
 		if member then
+--			local wasOnline = member.online
 			member:Refresh(self.readyCheckActive, unit, groupMember)
-		end
 
-		if i == 1 then
-			if groupMember then
-				self.wndRaidLeaderOptionsBtn:Show(groupMember.bIsLeader or groupMember.bRaidAssistant)
-				self.wndRaidMasterLootBtn:Show(groupMember.bIsLeader)
-			else
-				self.wndRaidLeaderOptionsBtn:Show(false)
-				self.wndRaidMasterLootBtn:Show(false)
-			end
+			-- member came online?
+--			if not wasOnline and member.online then
+--
+--			end
+			online = member.online and online + 1 or online
+		end
+		if groupMember and groupMember.bIsLeader then
+			self.leader = groupMember.strCharacterName
 		end
 	end
 
+	local isLeader = GroupLib.AmILeader()
+	self.wndRaidLeaderOptionsBtn:Show(isLeader)
+	self.wndRaidMasterLootBtn:Show(isLeader)
+
 	self:RefreshAggroIndicators()
+	self.wndTitleText:SetText(("(%d/%d)"):format(online, count))
 end
 
 function VinceRaidFrames:RefreshAggroIndicators()
@@ -551,6 +568,7 @@ function VinceRaidFrames:BuildGroups()
 			local frame = ApolloLoadForm(self.xmlDoc, "Group", self.wndMain, self)
 			frame:FindChild("Name"):SetText(" " .. group.name)
 			frame:FindChild("Btn"):SetData(group.name)
+			frame:FindChild("Btn"):Show(not self.settings.locked)
 			groupFrame = {
 				frame = frame
 			}
@@ -559,6 +577,7 @@ function VinceRaidFrames:BuildGroups()
 		end
 		groupFrame.index = i
 		groupFrame.members = {}
+		groupFrame.frame:FindChild("Name"):SetText(" " .. group.name)
 		newGroups[group.name] = true
 	end
 
@@ -682,13 +701,7 @@ function VinceRaidFrames:ValidateGroups(groups)
 end
 
 function VinceRaidFrames:IsLeader(name)
-	for i = 1, GroupLibGetMemberCount() do
-		local member = GroupLibGetGroupMember(i)
-		if member.strCharacterName == name and member.bIsLeader then
-			return true
-		end
-	end
-	return false
+	return self.leader == name
 end
 
 function VinceRaidFrames:ShareGroupLayout()
@@ -717,8 +730,20 @@ function VinceRaidFrames:GetUniqueGroupName()
 	end
 end
 
---function VinceRaidFrames:OnICCommMessageReceived(channel, message)
 function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
+	if type(message) ~= "table" then
+		return
+	end
+	if message.version then
+		local member = self.members[sender]
+		if member then
+			member.version = message.version
+		end
+		if GroupLib.AmILeader() then
+			self:ShareGroupLayout()
+		end
+		return
+	end
 	if self:IsLeader(sender) and self:ValidateGroups(message) then
 		self.settings.groups = message
 		self:ArrangeMembers()
@@ -841,19 +866,13 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 		self:UpdateRoleButtons()
 
 		if GroupLib.AmILeader() then
-			self:MakeMembersDraggable(true)
+			self.editMode = true
 		end
 
 		local nLeft, nTop, nRight, nBottom = self.wndRaidOptions:GetAnchorOffsets()
 		self.wndRaidOptions:SetAnchorOffsets(nLeft, nTop, nRight, nTop + self.wndRaidOptions:ArrangeChildrenVert(0))
 	else
-		self:MakeMembersDraggable(false)
-	end
-end
-
-function VinceRaidFrames:MakeMembersDraggable(value)
-	for name, member in pairs(self.members) do
-		member:SetDraggable(value)
+		self.editMode = false
 	end
 end
 
@@ -901,7 +920,6 @@ function VinceRaidFrames:OnStartReadyCheckBtn(wndHandler, wndControl) -- StartRe
 		GroupLib.ReadyCheck(strMessage) -- Sanitized in code
 		self.wndMain:FindChild("RaidConfigureBtn"):SetCheck(false)
 		wndHandler:SetFocus() -- To remove out of edit box
-		self.readyCheckActive = true
 	end
 end
 
@@ -973,6 +991,18 @@ function VinceRaidFrames:OnClearMarks()
 	GameLib.ClearAllTargetMarkers()
 end
 
+function VinceRaidFrames:UpdateLocks()
+	self.wndMain:SetStyle("Moveable", not self.settings.locked)
+	for name, group in pairs(self.groupFrames) do
+		group.frame:FindChild("Btn"):Show(not self.settings.locked)
+	end
+end
+
+function VinceRaidFrames:OnRaidLockFrameBtnToggle(wndHandler, wndControl)
+	self.settings.locked = wndHandler:IsChecked()
+	self:UpdateLocks()
+end
+
 function VinceRaidFrames:OnGroup_MemberFlagsChanged(...)
 	self:UpdateRoleButtons()
 	self:Show()
@@ -986,6 +1016,9 @@ end
 function VinceRaidFrames:OnGroup_Add(name)
 	tinsert(self.settings.groups[#self.settings.groups].members, name)
 	self:Show()
+--	if GroupLib.AmILeader() then
+--		self:ShareGroupLayout()
+--	end
 end
 
 function VinceRaidFrames:OnGroup_Remove(name) -- someone leaves
@@ -996,6 +1029,8 @@ end
 function VinceRaidFrames:OnGroup_Join(...)
 	self.settings.groups = nil
 	self:Show()
+
+	-- Todo: synchronize
 end
 
 function VinceRaidFrames:OnGroup_Left(...) -- player leaves

@@ -1,5 +1,6 @@
 local floor = math.floor
 
+local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
 local GeminiLocale = Apollo.GetPackage("Gemini:Locale-1.0").tPackage
 local L = GeminiLocale:GetLocale("VinceRaidFrames", true)
 
@@ -75,7 +76,7 @@ function Options:Show(xmlDoc)
 		GeminiLocale:TranslateWindow(L, self.wndMain)
 
 		local title = self.wndMain:FindChild("Title")
-		title:SetText(title:GetText() .. " v" .. self:GetAddonVersion())
+		title:SetText(title:GetText() .. " v" .. Utilities.GetAddonVersion())
 
 		Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames Options"})
 	end
@@ -260,10 +261,6 @@ function Options:UpdateSliderWidget(wndHandler, value)
 	end
 	parent:FindChild("Slider"):SetValue(value)
 	return value
-end
-
-function Options:GetAddonVersion()
-	return XmlDoc.CreateFromFile("toc.xml"):ToTable().Version
 end
 
 
