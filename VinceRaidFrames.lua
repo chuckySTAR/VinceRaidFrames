@@ -346,7 +346,7 @@ function VinceRaidFrames:OnDocLoaded_Main()
 end
 
 function VinceRaidFrames:LoadXml(callback)
-	if self.xmlDoc then
+	if self.xmlDoc and self.wndMain then
 		self[callback](self)
 	else
 		self.xmlDoc = XmlDoc.CreateFromFile("VinceRaidFrames.xml")
