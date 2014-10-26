@@ -1,3 +1,5 @@
+local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
+
 local floor = math.floor
 
 local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
@@ -12,8 +14,14 @@ local SortIdToName = {
 }
 
 local ColorIdToName = {
-	[1] = "ColorByClass",
-	[2] = "ColorByHealth"
+	[VinceRaidFrames.ColorBy.Class] = "ColorByClass",
+	[VinceRaidFrames.ColorBy.Health] = "ColorByHealth"
+}
+
+local NamingModeIdToName = {
+	[VinceRaidFrames.NamingMode.Default] = "NamingModeDefault",
+	[VinceRaidFrames.NamingMode.Shorten] = "NamingModeShorten",
+	[VinceRaidFrames.NamingMode.Custom] = "NamingModeCustom"
 }
 
 local Options = {}
@@ -65,7 +73,7 @@ function Options:Show(xmlDoc)
 	else
 		self.activeCategory = nil
 		self.xmlDoc = xmlDoc
-		self.wndMain = Apollo.LoadForm(xmlDoc, "VinceRaidFramesOptions", nil, self)
+		self.wndMain = Apollo.LoadForm(xmlDoc, "VinceRaidFramesOptions", "DefaultStratum", self)
 		self.categories = self.wndMain:FindChild("Categories")
 		self.content = self.wndMain:FindChild("Content")
 		self.closeBtn = self.wndMain:FindChild("CloseBtn")
@@ -106,8 +114,8 @@ function Options:OnCategorySelect(wndHandler)
 				options:FindChild("SortByOrder"):SetData(4)
 				options:FindChild(SortIdToName[self.settings.sortBy]):SetCheck(true)
 			elseif wndHandler:GetName() == "MemberCell" then
-				options:FindChild("ColorByClass"):SetData(1)
-				options:FindChild("ColorByHealth"):SetData(2)
+				options:FindChild("ColorByClass"):SetData(VinceRaidFrames.ColorBy.Class)
+				options:FindChild("ColorByHealth"):SetData(VinceRaidFrames.ColorBy.Health)
 				options:FindChild(ColorIdToName[self.settings.colorBy]):SetCheck(true)
 
 				options:FindChild("ShieldsBelowHealth"):SetCheck(self.settings.memberShieldsBelowHealth)
@@ -152,6 +160,15 @@ function Options:OnCategorySelect(wndHandler)
 					self.parent:ArrangeMemberFrames()
 					self.parent:ArrangeMembers()
 				end)
+			elseif wndHandler:GetName() == "Colors" then
+				self:InitColorWidget(options:FindChild("WarriorColor"), options:FindChild("WarriorLabel"), self.settings.classColors[GameLib.CodeEnumClass.Warrior])
+			elseif wndHandler:GetName() == "Names" then
+				options:FindChild("NamingModeDefault"):SetData(VinceRaidFrames.NamingMode.Default)
+				options:FindChild("NamingModeShorten"):SetData(VinceRaidFrames.NamingMode.Shorten)
+				options:FindChild("NamingModeCustom"):SetData(VinceRaidFrames.NamingMode.Custom)
+				options:FindChild(NamingModeIdToName[self.settings.namingMode]):SetCheck(true)
+
+				self:FillCustomNamesGrid()
 			end
 		end
 	end
@@ -184,6 +201,59 @@ end
 
 
 
+function Options:OnBottomLeftTextMouseButtonUp()
+	if GameLib.GetRealmName() == "Jabbit" then
+		Event_FireGenericEvent("GenericEvent_ChatLogWhisper", "Vince Addons")
+	end
+end
+
+
+
+function Options:FillCustomNamesGrid()
+	local grid = self.options:FindChild("Grid")
+	grid:DeleteAll()
+	for origName, newName in pairs(self.settings.names) do
+		local row = grid:AddRow("")
+		grid:SetCellText(row, 1, origName)
+		grid:SetCellText(row, 2, newName)
+	end
+	grid:SetSortColumn(1)
+end
+
+function Options:UpdateNameGridInputBoxes()
+	local grid = self.options:FindChild("Grid")
+	local nameInput = self.options:FindChild("NameInput")
+	local customNameInput = self.options:FindChild("CustomNameInput")
+	local row = grid:GetCurrentRow()
+	nameInput:SetText(grid:GetCellText(row, 1))
+	customNameInput:SetText(grid:GetCellText(row, 2))
+	customNameInput:SetFocus()
+end
+
+function Options:OnNameGridItemClick(wndControl, wndHandler, iRow, iCol, eMouseButton)
+	self:UpdateNameGridInputBoxes()
+end
+
+function Options:OnNameGridSort()
+	self:UpdateNameGridInputBoxes()
+end
+
+function Options:OnNewCustomName()
+	local nameInput = self.options:FindChild("NameInput")
+	local customNameInput = self.options:FindChild("CustomNameInput")
+	self.settings.names[nameInput:GetText()] = customNameInput:GetText()
+	nameInput:SetText("")
+	nameInput:ClearFocus()
+	customNameInput:SetText("")
+	customNameInput:ClearFocus()
+	self:FillCustomNamesGrid()
+	self.parent:RenameMembers()
+end
+
+function Options:OnShortenNames(wndHandler, wndControl)
+	self.settings.shortenNames = wndControl:IsChecked()
+end
+
 function Options:OnTargetOnHover(wndHandler, wndControl)
 	self.settings.targetOnHover = wndControl:IsChecked()
 end
@@ -195,6 +265,11 @@ end
 function Options:OnShowClassIcon(wndHandler, wndControl)
 	self.settings.memberShowClassIcon = wndControl:IsChecked()
 	self.parent:UpdateClassIcons()
+end
+
+function Options:OnHideInGroups(wndHandler, wndControl)
+	self.settings.hideInGroups = wndControl:IsChecked()
+	self.parent:Show()
 end
 
 function Options:OnShieldsBelowHealth(wndHandler, wndControl)
@@ -230,6 +305,11 @@ function Options:OnColorBy(wndHandler, wndControl)
 	self.parent:UpdateColorBy()
 end
 
+function Options:OnNamingMode(wndHandler, wndControl)
+	self.settings.namingMode = wndControl:GetData()
+	self.parent:RenameMembers()
+end
+
 function Options:InitSliderWidget(frame, min, max, tick, value, roundDigits, callback)
 	frame:SetData({
 		callback = callback,
@@ -241,6 +321,11 @@ function Options:InitSliderWidget(frame, min, max, tick, value, roundDigits, cal
 	frame:FindChild("Min"):SetText(tostring(min))
 	frame:FindChild("Max"):SetText(tostring(max))
 	return frame
+end
+
+function Options:InitColorWidget(editBox, label, value)
+	editBox:SetText()
+	label:SetTextColor()
 end
 
 function Options:OnSliderWidget(wndHandler, wndControl, value)

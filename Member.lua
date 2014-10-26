@@ -1,3 +1,4 @@
+local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
 local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
 
 local setmetatable = setmetatable
@@ -35,9 +36,6 @@ local MarkerPixie = {
 		nOffsets = {-22, -10, -2, 10}
 	}
 }
-
-local ColorByClass = 1
-local ColorByHealth = 2
 
 
 local Member = {}
@@ -102,7 +100,6 @@ function Member:Init(parent)
 	self:Arrange()
 	self:ShowClassIcon(self.settings.memberShowClassIcon)
 
-	self.text:SetText(self.name)
 	self.text:SetFont(self.settings.memberFont)
 	self:SetNameColor(self.settings.memberColor)
 
@@ -114,6 +111,10 @@ function Member:Init(parent)
 	self:Refresh(false, self.unit, self.groupMember)
 
 	-- Bug: SetTarget() isn't updated on reloadui
+end
+
+function Member:SetName(name)
+	self.text:SetText(name)
 end
 
 function Member:GetWidth()
@@ -186,9 +187,9 @@ function Member:ShowClassIcon(show)
 end
 
 function Member:UpdateColorBy(color)
-	if color == ColorByClass and not self.readyCheckMode then
+	if color == VinceRaidFrames.ColorBy.Class and not self.readyCheckMode then
 		self:SetHealthColor(self.classColor)
-	elseif color == ColorByHealth then
+	elseif color == VinceRaidFrames.ColorBy.Health then
 		self:Refresh(self.readyCheckMode, nil, self.groupMember)
 	end
 end
@@ -202,6 +203,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	local health
 	local shield
 	local absorb
+	local wasOnline = self.online
 
 	if groupMember then
 		health = groupMember.nHealth / groupMember.nHealthMax
@@ -221,6 +223,12 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		self.online = true
 	end
 
+	if not wasOnline and self.online then
+		Event_FireGenericEvent("VinceRaidFrames_Group_Online", self.name)
+	elseif wasOnline and not self.online then
+		Event_FireGenericEvent("VinceRaidFrames_Group_Offline", self.name)
+	end
+
 	if self.outOfRange and not self.dead and self.online then
 		self.frame:SetOpacity(self.settings.memberOutOfRangeOpacity, 5)
 	else
@@ -230,7 +238,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	self:RefreshNameColor()
 	self:RefreshTargetMarker(unit)
 
-	if not readyCheckMode and self.settings.colorBy == ColorByHealth then
+	if not readyCheckMode and self.settings.colorBy == VinceRaidFrames.ColorBy.Health then
 		self:SetHealthColor(Utilities.GetColorBetween(self.lowHealthColor, self.highHealthColor, health))
 	end
 
