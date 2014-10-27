@@ -850,7 +850,7 @@ function VinceRaidFrames:GetUniqueGroupName()
 end
 
 function VinceRaidFrames:RaidWarning(lines)
-	Event_FireGenericEvent("StoryPanelDialog_Show", GameLib.CodeEnumStoryPanel.Urgent, lines, 5)
+	Event_FireGenericEvent("StoryPanelDialog_Show", GameLib.CodeEnumStoryPanel.Urgent, lines, 6)
 end
 
 function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)

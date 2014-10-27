@@ -1,6 +1,8 @@
 local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
 local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
 
+local WindowLocationNew = WindowLocation.new
+
 local setmetatable = setmetatable
 local ipairs = ipairs
 local abs = math.abs
@@ -72,7 +74,10 @@ function Member:new(unit, groupMember, parent)
 		dead = false,
 		online = true,
 		targeted = false,
-		hovered = false
+		hovered = false,
+		lastHealthAnchorPoint = 0,
+		lastShieldAnchorPoint = 0,
+		lastAbsorbAnchorPoint = 0
 	}
 	setmetatable(o, self)
 
@@ -243,9 +248,23 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	end
 
     if self.settings.memberFillLeftToRight then
-		self.health:SetAnchorPoints(0, 0, health, 1)
-		self.shield:SetAnchorPoints(0, 0, shield, 1)
-		self.absorb:SetAnchorPoints(0, 0, absorb, 1)
+--		self.health:SetAnchorPoints(0, 0, health, 1)
+--		self.shield:SetAnchorPoints(0, 0, shield, 1)
+--		self.absorb:SetAnchorPoints(0, 0, absorb, 1)
+
+		if health ~= self.lastHealthAnchorPoint then
+			self.health:TransitionMove(WindowLocationNew({fPoints = {0, 0, health, 1}}), .1)
+		end
+		if shield ~= self.lastShieldAnchorPoint then
+			self.shield:TransitionMove(WindowLocationNew({fPoints = {0, 0, shield, 1}}), .1)
+		end
+		if absorb ~= self.lastAbsorbAnchorPoint then
+			self.absorb:TransitionMove(WindowLocationNew({fPoints = {0, 0, absorb, 1}}), .1)
+		end
+
+		self.lastHealthAnchorPoint = health
+		self.lastShieldAnchorPoint = shield
+		self.lastAbsorbAnchorPoint = absorb
 	else
 		self.health:SetAnchorPoints(1 - health, 0, 1, 1)
 		self.shield:SetAnchorPoints(0, 0, 1 - shield, 1)
