@@ -253,15 +253,15 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 --		self.absorb:SetAnchorPoints(0, 0, absorb, 1)
 
 		if health ~= self.lastHealthAnchorPoint then
-			self.health:TransitionMove(WindowLocationNew({fPoints = {0, 0, health, 1}}), .05)
+			self.health:TransitionMove(WindowLocationNew({fPoints = {0, 0, health, 1}}), .075)
 			self.lastHealthAnchorPoint = health
 		end
 		if shield ~= self.lastShieldAnchorPoint then
-			self.shield:TransitionMove(WindowLocationNew({fPoints = {0, 0, shield, 1}}), .05)
+			self.shield:TransitionMove(WindowLocationNew({fPoints = {0, 0, shield, 1}}), .075)
 			self.lastShieldAnchorPoint = shield
 		end
 		if absorb ~= self.lastAbsorbAnchorPoint then
-			self.absorb:TransitionMove(WindowLocationNew({fPoints = {0, 0, absorb, 1}}), .05)
+			self.absorb:TransitionMove(WindowLocationNew({fPoints = {0, 0, absorb, 1}}), .075)
 			self.lastAbsorbAnchorPoint = absorb
 		end
 	else
