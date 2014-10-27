@@ -75,9 +75,9 @@ function Member:new(unit, groupMember, parent)
 		online = true,
 		targeted = false,
 		hovered = false,
-		lastHealthAnchorPoint = 0,
-		lastShieldAnchorPoint = 0,
-		lastAbsorbAnchorPoint = 0
+		lastHealthAnchorPoint = -1,
+		lastShieldAnchorPoint = -1,
+		lastAbsorbAnchorPoint = -1
 	}
 	setmetatable(o, self)
 
