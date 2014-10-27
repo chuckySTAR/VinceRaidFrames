@@ -48,6 +48,7 @@ function Member:new(unit, groupMember, parent)
 		unit = unit,
 		name = groupMember and groupMember.strCharacterName or unit:GetName(),
 		groupMember = groupMember,
+		version = nil, -- updated on iccomm messages
 		readyCheckMode = false,
 		frame = nil,
 		draggable = false,
