@@ -88,7 +88,6 @@ function Member:Init(parent)
 	self.lowHealthColor = {Utilities.RGB2HSV(self.settings.memberLowHealthColor.r, self.settings.memberLowHealthColor.g, self.settings.memberLowHealthColor.b)}
 	self.highHealthColor = {Utilities.RGB2HSV(self.settings.memberHighHealthColor.r, self.settings.memberHighHealthColor.g, self.settings.memberHighHealthColor.b)}
 
-	self.memberOverlay = self.frame:FindChild("MemberOverlay")
 	self.container = self.frame:FindChild("Container")
 	self.overlay = self.frame:FindChild("Overlay")
 	self.healthOverlay = self.frame:FindChild("HealthOverlay")
@@ -127,8 +126,8 @@ function Member:GetHeight()
 end
 
 function Member:Arrange()
-	self.frame:SetAnchorOffsets(0, 0, self:GetWidth(), self:GetHeight())
-	self.container:SetAnchorOffsets(0, 0, self.settings.memberShowTargetMarker and -20 or 0, 0)
+	self.frame:SetAnchorOffsets(0, 0, self:GetWidth() + self.settings.memberPaddingLeft + self.settings.memberPaddingRight, self:GetHeight() + self.settings.memberPaddingTop + self.settings.memberPaddingBottom)
+	self.container:SetAnchorOffsets(self.settings.memberPaddingLeft, self.settings.memberPaddingTop, -self.settings.memberPaddingRight, self.settings.memberPaddingBottom)
 	if self.settings.memberShieldsBelowHealth then
 		self.frame:FindChild("Health"):SetAnchorOffsets(1, 1, -1, -1 - self.settings.memberShieldHeight - self.settings.memberAbsorbHeight)
 
@@ -237,7 +236,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	end
 
 	self:RefreshNameColor()
-	self:RefreshTargetMarker(unit)
+--	self:RefreshTargetMarker(unit)
 
 	if not readyCheckMode and self.settings.colorBy == VinceRaidFrames.ColorBy.Health then
 		self:SetHealthColor(Utilities.GetColorBetween(self.lowHealthColor, self.highHealthColor, health))
