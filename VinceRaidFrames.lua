@@ -460,13 +460,13 @@ function VinceRaidFrames:OnRefresh()
 --			end
 		end
 		if groupMember and groupMember.bIsLeader then
-			-- leader changed
+			-- leader changed?
 			if self.leader ~= "" and self.leader ~= groupMember.strCharacterName then
 				-- close options window to update states
-				if self.wndRaidConfigureBtn:IsChecked() then
-					self.wndRaidConfigureBtn:SetCheck(false)
-					self.wndRaidConfigureBtn:SetCheck(true)
-				end
+--				if self.wndRaidConfigureBtn:IsChecked() then
+--					self.wndRaidConfigureBtn:SetCheck(false)
+--					self.wndRaidConfigureBtn:SetCheck(true)
+--				end
 			end
 			self.leader = groupMember.strCharacterName
 		end
@@ -846,7 +846,7 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
 	if type(message) ~= "table" then
 		return
 	end
-	if type(message.rw) == "table" and #message.rw > 1 and self:IsLeader(sender) then
+	if type(message.rw) == "table" and #message.rw > 0 and self:IsLeader(sender) then
 		self:RaidWarning(message.rw, sender)
 		return
 	end
