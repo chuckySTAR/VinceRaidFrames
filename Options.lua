@@ -108,6 +108,8 @@ function Options:OnCategorySelect(wndHandler)
 					self.settings.memberColumns = value
 					self.parent:ArrangeMembers()
 				end)
+				options:FindChild("HideInGroups"):SetCheck(self.settings.hideInGroups)
+
 				options:FindChild("SortByClass"):SetData(1)
 				options:FindChild("SortByRole"):SetData(2)
 				options:FindChild("SortByName"):SetData(3)
@@ -248,10 +250,6 @@ function Options:OnNewCustomName()
 	customNameInput:ClearFocus()
 	self:FillCustomNamesGrid()
 	self.parent:RenameMembers()
-end
-
-function Options:OnShortenNames(wndHandler, wndControl)
-	self.settings.shortenNames = wndControl:IsChecked()
 end
 
 function Options:OnTargetOnHover(wndHandler, wndControl)

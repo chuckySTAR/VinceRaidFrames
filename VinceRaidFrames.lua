@@ -193,7 +193,8 @@ function VinceRaidFrames:OnLoadForReal()
 	
 	ApolloRegisterSlashCommand("vrf", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("vinceraidframes", "OnSlashCommand", self)
-	
+	ApolloRegisterSlashCommand("rw", "OnSlashRaidWarning", self)
+
 	self.timer = ApolloTimer.Create(self.settings.refreshInterval, true, "OnRefresh", self)
 	self.timer:Stop()
 
@@ -834,8 +835,19 @@ function VinceRaidFrames:GetUniqueGroupName()
 	end
 end
 
+function VinceRaidFrames:RaidWarning(lines, sender)
+	Event_FireGenericEvent("StoryPanelDialog_Show", GameLib.CodeEnumStoryPanel.Urgent, lines, 5)
+	for i, msg in ipairs(lines) do
+		ChatSystemLib.PostOnChannel(ChatSystemLib.ChatChannel_Party, msg, sender)
+	end
+end
+
 function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
 	if type(message) ~= "table" then
+		return
+	end
+	if type(message.rw) == "table" and #message.rw > 1 and self:IsLeader(sender) then
+		self:RaidWarning(message.rw, sender)
 		return
 	end
 	if message.version then
@@ -1196,15 +1208,11 @@ function VinceRaidFrames:OnSlashCommand()
 	self:LoadXml("OnDocLoaded_Toggle")
 end
 
-
-
-
-function VinceRaidFrames.ToList(tbl)
-	local list = {}
-	for key, value in pairs(tbl) do
-		tinsert(list, value)
+function VinceRaidFrames:OnSlashRaidWarning(cmd, arg)
+	if GroupLib.AmILeader() and self.channel then
+		self.channel:SendMessage({rw = {arg}})
+		self:RaidWarning({arg}, GameLibGetPlayerUnit():GetName())
 	end
-	return list
 end
 
 
