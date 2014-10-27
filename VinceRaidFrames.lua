@@ -76,6 +76,7 @@ function VinceRaidFrames:new(o)
 	o.groupFrames = {}
 	o.leader = ""
 	o.editMode = false -- dragndrop of members
+	o.addonVersionAnnounceTimer = nil
 
 	o.defaultSettings = {
 		names = {},
@@ -263,7 +264,7 @@ function VinceRaidFrames:OnDocLoaded_Main()
 
 
 	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
-	self.channel:SendMessage({version = Utilities.GetAddonVersion()})
+	self:ShareAddonVersion()
 
 	self.groupContextMenu = ContextMenu:new(self.xmlDoc, {
 		{
@@ -413,6 +414,18 @@ function VinceRaidFrames:OnConfigure()
 	self:LoadXml("OnDocLoaded_Options")
 end
 
+
+function VinceRaidFrames:ShareAddonVersion()
+	self.addonVersionAnnounceTimer = ApolloTimer.Create(2, false, "OnShareAddonVersionTimer", self)
+end
+
+function VinceRaidFrames:OnShareAddonVersionTimer()
+	if self.channel then
+		self.channel:SendMessage({version = Utilities.GetAddonVersion()})
+	end
+end
+
+
 function VinceRaidFrames:OnGroup_ReadyCheck(index, message)
 	ReadyCheck:Show(self.xmlDoc, index, message)
 	self.readyCheckActive = true
@@ -427,8 +440,6 @@ function VinceRaidFrames:OnReadyCheckTimeout()
 		member:UnsetReadyCheckMode()
 	end
 end
-
-
 
 function VinceRaidFrames:OnTargetUnitChanged(unit)
 	if self.lastTarget then
@@ -1136,9 +1147,6 @@ end
 function VinceRaidFrames:OnGroup_Add(name) -- someone joins
 	tinsert(self.settings.groups[#self.settings.groups].members, name)
 	self:BuildMembers()
---	if GroupLib.AmILeader() then
---		self:ShareGroupLayout()
---	end
 end
 
 function VinceRaidFrames:OnGroup_Remove(name) -- someone leaves
@@ -1150,7 +1158,7 @@ function VinceRaidFrames:OnGroup_Join() -- player joins
 	self.settings.groups = nil
 	self:Show()
 
-	-- Todo: synchronize
+	self:ShareAddonVersion()
 end
 
 function VinceRaidFrames:OnGroup_Left() -- player leaves
