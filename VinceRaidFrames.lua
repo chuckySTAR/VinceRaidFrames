@@ -473,7 +473,7 @@ function VinceRaidFrames:OnRefresh()
 	end
 
 	local isLeader = GroupLib.AmILeader()
-	self.wndRaidLeaderOptionsBtn:Show(isLeader)
+	self.wndRaidLeaderOptionsBtn:Show(GroupLib.InRaid() and isLeader)
 	self.wndRaidMasterLootBtn:Show(isLeader)
 
 	self:RefreshAggroIndicators()
