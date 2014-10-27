@@ -7,6 +7,7 @@ local setmetatable = setmetatable
 local ipairs = ipairs
 local abs = math.abs
 local floor = math.floor
+local max = math.max
 
 local ktIdToClassSprite =
 {
@@ -211,8 +212,8 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	local wasOnline = self.online
 
 	if groupMember then
-		health = groupMember.nHealth / groupMember.nHealthMax
-		shield = groupMember.nShield / groupMember.nShieldMax
+		health = groupMember.nHealth / max(groupMember.nHealthMax, 1)
+		shield = groupMember.nShield / max(groupMember.nShieldMax, 1)
 		absorb = groupMember.nAbsorptionMax == 0 and 0 or groupMember.nAbsorption / groupMember.nAbsorptionMax
 
 		self.outOfRange = groupMember.nHealthMax == 0 or not unit or not unit:IsValid()
@@ -241,7 +242,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	end
 
 	self:RefreshNameColor()
---	self:RefreshTargetMarker(unit)
+	self:RefreshTargetMarker(unit)
 
 	if not readyCheckMode and self.settings.colorBy == VinceRaidFrames.ColorBy.Health then
 		self:SetHealthColor(Utilities.GetColorBetween(self.lowHealthColor, self.highHealthColor, health))
@@ -288,22 +289,24 @@ function Member:RefreshTargetMarker(unit)
 	if unit and self.settings.memberShowTargetMarker then
 		local sprite = tTargetMarkSpriteMap[unit:GetTargetMarker()]
 		if sprite then
-			MarkerPixie.strSprite = sprite
-			if not self.targetMarkerPixie then
-				self.targetMarkerPixie = self.memberOverlay:AddPixie(MarkerPixie)
-			elseif sprite ~= self.targetMarkerSprite then
-				self.memberOverlay:UpdatePixie(self.targetMarkerPixie, MarkerPixie)
+			if not self.targetMarkerFrame then
+				self.targetMarkerFrame = Utilities.GetFrame(self.frame, self)
+				self.targetMarkerFrame:SetBGColor("ffffffff")
+				self.targetMarkerFrame:SetStyle("NoClip", true)
+				self.targetMarkerFrame:SetStyle("Picture", true)
+				self.targetMarkerFrame:SetAnchorPoints(1, .5, 1, .5)
+				self.targetMarkerFrame:SetAnchorOffsets(-22, -10, -2, 10)
+				self.targetMarkerFrame:SetSprite(sprite)
+			elseif sprite ~= self.targetMarkerFrame:GetSprite() then
+				self.targetMarkerFrame:SetSprite(sprite)
 			end
-			self.targetMarkerSprite = sprite
-		elseif not sprite then
-			self.memberOverlay:DestroyPixie(self.targetMarkerPixie)
-			self.targetMarkerPixie = nil
-			self.targetMarkerSprite = ""
+		elseif not sprite and self.targetMarkerFrame then
+			self.targetMarkerFrame:Destroy()
+			self.targetMarkerFrame = nil
 		end
-	elseif self.targetMarkerPixie then
-		self.memberOverlay:DestroyPixie(self.targetMarkerPixie)
-		self.targetMarkerPixie = nil
-		self.targetMarkerSprite = ""
+	elseif self.targetMarkerFrame then
+		self.targetMarkerFrame:Destroy()
+		self.targetMarkerFrame = nil
 	end
 end
 

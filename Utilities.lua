@@ -3,6 +3,8 @@ local min = math.min
 local floor = math.floor
 local round = function(val) return floor(val + .5) end
 
+local dummyFrameXmlDoc = XmlDoc.CreateFromTable({__XmlNode = "Forms", [1] = {__XmlNode = "Form", Name = "Form"}})
+
 local Utilities = {
 	version = nil
 }
@@ -17,6 +19,10 @@ end
 function Utilities.GetColorBetween(from, to, position)
 	local r, g, b = Utilities.HSV2RGB((to[1] - from[1]) * position + from[1], (to[2] - from[2]) * position + from[2], (to[3] - from[3]) * position + from[3])
 	return ("%02X%02X%02X"):format(r, g, b)
+end
+
+function Utilities.GetFrame(parent, handler)
+	return Apollo.LoadForm(dummyFrameXmlDoc, "Form", parent, handler)
 end
 
 -- r, g, b [0..1]

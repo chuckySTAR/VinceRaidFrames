@@ -1075,9 +1075,7 @@ function VinceRaidFrames:IsUnitMob(unit)
 	return unit ~= nil and unit:GetType() == "NonPlayer" and unit:GetDispositionTo(GameLibGetPlayerUnit()) ~= UnitCodeEnumDispositionFriendly
 end
 
-aaaa = 0
 function VinceRaidFrames:OnUnitCreated(unit)
-	aaaa = aaaa + 1
 	if self:IsUnitMob(unit) and unit:IsInCombat() and unit:GetTarget() then
 		self.mobsInCombat[unit:GetId()] = unit
 	end
