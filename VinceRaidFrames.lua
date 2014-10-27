@@ -835,11 +835,8 @@ function VinceRaidFrames:GetUniqueGroupName()
 	end
 end
 
-function VinceRaidFrames:RaidWarning(lines, sender)
+function VinceRaidFrames:RaidWarning(lines)
 	Event_FireGenericEvent("StoryPanelDialog_Show", GameLib.CodeEnumStoryPanel.Urgent, lines, 5)
-	for i, msg in ipairs(lines) do
-		ChatSystemLib.PostOnChannel(ChatSystemLib.ChatChannel_Party, msg, sender)
-	end
 end
 
 function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
@@ -847,7 +844,7 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
 		return
 	end
 	if type(message.rw) == "table" and #message.rw > 0 and self:IsLeader(sender) then
-		self:RaidWarning(message.rw, sender)
+		self:RaidWarning(message.rw)
 		return
 	end
 	if message.version then
@@ -1210,8 +1207,9 @@ end
 
 function VinceRaidFrames:OnSlashRaidWarning(cmd, arg)
 	if GroupLib.AmILeader() and self.channel then
+		ChatSystemLib.GetChannels()[ChatSystemLib.ChatChannel_Party]:Send(arg)
 		self.channel:SendMessage({rw = {arg}})
-		self:RaidWarning({arg}, GameLibGetPlayerUnit():GetName())
+		self:RaidWarning({arg})
 	end
 end
 
