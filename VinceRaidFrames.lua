@@ -865,9 +865,9 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
 		local member = self.members[sender]
 		if member then
 			member.version = message.version
-		end
-		if GroupLib.AmILeader() then
-			self:ShareGroupLayout()
+			if GroupLib.AmILeader() then
+				self:ShareGroupLayout()
+			end
 		end
 		return
 	end
@@ -1158,8 +1158,6 @@ end
 function VinceRaidFrames:OnGroup_Join() -- player joins
 	self.settings.groups = nil
 	self:Show()
-
-	self:ShareAddonVersion()
 end
 
 function VinceRaidFrames:OnGroup_Left() -- player leaves
