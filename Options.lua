@@ -219,7 +219,7 @@ function Options:FillCustomNamesGrid()
 		grid:SetCellText(row, 1, origName)
 		grid:SetCellText(row, 2, newName)
 	end
-	grid:SetSortColumn(1)
+	grid:SetSortColumn(grid:GetSortColumn() or 1, grid:IsSortAscending())
 end
 
 function Options:UpdateNameGridInputBoxes()
