@@ -427,7 +427,7 @@ end
 
 function VinceRaidFrames:OnShareAddonVersionTimer()
 	if self.channel then
-		self.channel:SendMessage({version = Utilities.GetAddonVersion()})
+		self.channel:SendMessage({version = self.Utilities.GetAddonVersion()})
 	end
 end
 
