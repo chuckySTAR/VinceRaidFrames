@@ -1,6 +1,8 @@
 local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
 
 local floor = math.floor
+local tostring = tostring
+local tonumber = tonumber
 
 local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
 local GeminiLocale = Apollo.GetPackage("Gemini:Locale-1.0").tPackage
@@ -162,6 +164,20 @@ function Options:OnCategorySelect(wndHandler)
 					self.parent:ArrangeMemberFrames()
 					self.parent:ArrangeMembers()
 				end)
+
+				local paddingLeft = options:FindChild("PaddingLeft")
+				local paddingTop = options:FindChild("PaddingTop")
+				local paddingRight = options:FindChild("PaddingRight")
+				local paddingBottom = options:FindChild("PaddingBottom")
+				paddingLeft:SetText(self.settings.memberPaddingLeft)
+				paddingLeft:SetData("memberPaddingLeft")
+				paddingTop:SetText(self.settings.memberPaddingTop)
+				paddingTop:SetData("memberPaddingTop")
+				paddingRight:SetText(self.settings.memberPaddingRight)
+				paddingRight:SetData("memberPaddingRight")
+				paddingBottom:SetText(self.settings.memberPaddingBottom)
+				paddingBottom:SetData("memberPaddingBottom")
+
 			elseif wndHandler:GetName() == "Colors" then
 				self:InitColorWidget(options:FindChild("WarriorColor"), options:FindChild("WarriorLabel"), self.settings.classColors[GameLib.CodeEnumClass.Warrior])
 			elseif wndHandler:GetName() == "Names" then
@@ -171,6 +187,9 @@ function Options:OnCategorySelect(wndHandler)
 				options:FindChild(NamingModeIdToName[self.settings.namingMode]):SetCheck(true)
 
 				self:FillCustomNamesGrid()
+			elseif wndHandler:GetName() == "Indicators" then
+				local grid = options:FindChild("IndicatorsGrid")
+
 			end
 		end
 	end
@@ -344,6 +363,14 @@ function Options:UpdateSliderWidget(wndHandler, value)
 	end
 	parent:FindChild("Slider"):SetValue(value)
 	return value
+end
+
+function Options:OnMemberPadding(wndHandler)
+	local data = wndHandler:GetData()
+	local value = floor(tonumber(wndHandler:GetText()) or 0)
+	self.settings[data] = value
+	self.parent:ArrangeMemberFrames()
+	self.parent:ArrangeMembers()
 end
 
 
