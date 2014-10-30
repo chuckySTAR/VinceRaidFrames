@@ -79,7 +79,6 @@ function VinceRaidFrames:new(o)
 	o.addonVersionAnnounceTimer = nil
 
 	o.defaultSettings = {
-		names = {},
 		classColors = {
 			[GameLib.CodeEnumClass.Warrior] = "F54F4F",
 			[GameLib.CodeEnumClass.Engineer] = "EFAB48",
@@ -137,7 +136,9 @@ function VinceRaidFrames:new(o)
 		hideInGroups = false,
 		namingMode = VinceRaidFrames.NamingMode.Shorten
 	}
-	o.settings = setmetatable({}, {__index = o.defaultSettings})
+	o.settings = setmetatable({
+		names = {}
+	}, {__index = o.defaultSettings})
 
     return o
 end
@@ -1186,12 +1187,7 @@ function VinceRaidFrames:OnSave(eType)
 	if eType ~= GameLib.CodeEnumAddonSaveLevel.Character then
 		return
 	end
-
-	-- Explicitly set names in self.settings
-	if not rawget(self.settings, "names") then
-		rawset(self.settings, "names", self.settings.names)
-	end
-
+	
 	return self.settings
 end
 
