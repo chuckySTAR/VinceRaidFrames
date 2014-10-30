@@ -1187,7 +1187,12 @@ function VinceRaidFrames:OnSave(eType)
 	if eType ~= GameLib.CodeEnumAddonSaveLevel.Character then
 		return
 	end
-	
+
+	-- Explicitly set names in self.settings
+	if not rawget(self.settings, "names") then
+		rawset(self.settings, "names", self.settings.names)
+	end
+
 	return self.settings
 end
 
