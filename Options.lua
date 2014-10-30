@@ -97,7 +97,7 @@ end
 function Options:OnCategorySelect(wndHandler)
 	local categoryName = wndHandler:GetName()
 --	if self.activeCategory ~= wndHandler:GetName() then
-	
+
 	self.activeCategory = categoryName
 	self.content:DestroyChildren()
 	local options = Apollo.LoadForm(self.xmlDoc, "Options" .. categoryName, self.content, self)
@@ -359,15 +359,14 @@ end
 function Options:OnClassColorChanged(wndHandler)
 	local text = wndHandler:GetText()
 	local label, key = unpack(wndHandler:GetData())
-	local value = tonumber(text, 16) and "ff" .. text or "ffffffff"
+	local value = tonumber(text, 16) and text or "ffffff"
 	self.settings.classColors[key] = value
-	label:SetTextColor(value)
+	label:SetTextColor("ff" .. value)
 	self.parent:UpdateClassColors()
 end
 
 function Options:OnResetColors()
-	Print("oke?")
-	self.settings.classColors = nil
+	self.settings.classColors = TableUtil:Copy(self.parent.defaultSettings.classColors)
 	local colors = self.wndMain:FindChild("Colors")
 	colors:SetCheck(true)
 	self:OnCategorySelect(colors)

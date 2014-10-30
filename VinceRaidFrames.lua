@@ -137,7 +137,10 @@ function VinceRaidFrames:new(o)
 		hideInGroups = false,
 		namingMode = VinceRaidFrames.NamingMode.Shorten
 	}
-	o.settings = setmetatable({}, {__index = o.defaultSettings})
+	o.settings = setmetatable({
+		names = {},
+		classColors = TableUtil:Copy(o.defaultSettings.classColors)
+	}, {__index = o.defaultSettings})
 
     return o
 end
@@ -1194,21 +1197,21 @@ function VinceRaidFrames:OnSave(eType)
 		return
 	end
 
-	-- Explicitly set keys in self.settings
-	for key, value in pairs(self.defaultSettings) do
-		if type(value) == "table" then
-			if not rawget(self.settings, key) then
-				rawset(self.settings, key, self.settings[key])
-			end
-		end
-	end
-
 	return self.settings
 end
 
 function VinceRaidFrames:OnRestore(eType, tSavedData)
 	if eType ~= GameLib.CodeEnumAddonSaveLevel.Character then
 		return
+	end
+
+	-- Explicitly set keys in settings
+	for key, value in pairs(self.defaultSettings) do
+		if type(value) == "table" then
+			if not tSavedData[key] then
+				tSavedData[key] = TableUtil:Copy(self.defaultSettings[key])
+			end
+		end
 	end
 
 	self.settings = setmetatable(tSavedData, {__index = self.defaultSettings})
