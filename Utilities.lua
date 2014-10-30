@@ -1,13 +1,21 @@
+local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
+
 local max = math.max
 local min = math.min
 local floor = math.floor
 local round = function(val) return floor(val + .5) end
+local tonumber = tonumber
+local bit = bit
 
 local dummyFrameXmlDoc = XmlDoc.CreateFromTable({__XmlNode = "Forms", [1] = {__XmlNode = "Form", Name = "Form"}})
 
 local Utilities = {
 	version = nil
 }
+function Utilities:Init(parent)
+	Apollo.LinkAddon(parent, self)
+end
+
 function Utilities:GetAddonVersion()
 	if Utilities.version then
 		return Utilities.version
@@ -23,6 +31,12 @@ end
 
 function Utilities.GetFrame(parent, handler)
 	return Apollo.LoadForm(dummyFrameXmlDoc, "Form", parent, handler)
+end
+
+-- "ffff0000" -> a, r, g, b [0..1]
+function Utilities.HexToNumbers(hex)
+	hex = tonumber(hex, 16) or 0
+	return bit.rshift(hex, 24) / 255, bit.band(bit.rshift(hex, 16), 0xff) / 255, bit.band(bit.rshift(hex, 8), 0xff) / 255, bit.band(hex, 0xff) / 255
 end
 
 -- r, g, b [0..1]
@@ -73,4 +87,4 @@ function Utilities.HSV2RGB(h, s, v)
 	end
 end
 
-Apollo.RegisterPackage(Utilities, "Vince:VRF:Utilities-1", 1, {})
+VinceRaidFrames.Utilities = Utilities

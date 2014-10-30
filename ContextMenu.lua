@@ -1,3 +1,4 @@
+local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
 
 local ipairs = ipairs
 local tinsert = table.insert
@@ -19,7 +20,11 @@ function ContextMenu:new(xmlDoc, config)
 	return o
 end
 
-function ContextMenu:Init()
+function ContextMenu:Init(parent)
+	Apollo.LinkAddon(parent, self)
+end
+
+function ContextMenu:Build()
 	self.wndMain = Apollo.LoadForm(self.xmlDoc, "ContextMenu", "TooltipStratum", ContextMenu)
 	self.wndMain:SetData(self)
 
@@ -32,7 +37,7 @@ end
 
 function ContextMenu:Show(value)
 	if not self.wndMain then
-		self:Init()
+		self:Build()
 	end
 
 	self.wndMain:Show(true, true)
@@ -78,4 +83,4 @@ function ContextMenu:OnBtnRegularMouseExit(wndHandler, wndControl)
 	wndHandler:GetParent():FindChild("BtnText"):SetTextColor("UI_BtnTextBlueNormal")
 end
 
-Apollo.RegisterPackage(ContextMenu, "Vince:VRF:ContextMenu-1", 1, {})
+VinceRaidFrames.ContextMenu = ContextMenu

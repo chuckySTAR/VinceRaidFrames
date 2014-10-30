@@ -12,10 +12,6 @@ require "ICCommLib"
 
 local VinceRaidFrames = {}
 
-local Options
-local ReadyCheck
-local Member
-local ContextMenu
 local Utilities
 
 local pairs = pairs
@@ -66,8 +62,6 @@ function VinceRaidFrames:new(o)
 	o = o or {}
     setmetatable(o, self)
 
-	o.options = nil -- Options instance
-	o.readyCheck = nil -- ReadyCheck instance
 	o.onLoadDelayTimer = nil -- Dependencies in RegisterAddon do not *really* work
 	o.timer = nil -- Refresh timer
 	o.readyCheckActive = false -- Different view during ready check
@@ -77,6 +71,13 @@ function VinceRaidFrames:new(o)
 	o.leader = ""
 	o.editMode = false -- dragndrop of members
 	o.addonVersionAnnounceTimer = nil
+
+	-- files overwrite these
+	self.Options = nil
+	self.ReadyCheck = nil
+	self.Member = nil
+	self.ContextMenu = nil
+	self.Utilities = nil
 
 	o.defaultSettings = {
 		classColors = {
@@ -136,9 +137,7 @@ function VinceRaidFrames:new(o)
 		hideInGroups = false,
 		namingMode = VinceRaidFrames.NamingMode.Shorten
 	}
-	o.settings = setmetatable({
-		names = {}
-	}, {__index = o.defaultSettings})
+	o.settings = setmetatable({}, {__index = o.defaultSettings})
 
     return o
 end
@@ -148,11 +147,11 @@ function VinceRaidFrames:Init()
 end
 
 function VinceRaidFrames:OnLoad()
-	Options = Apollo.GetPackage("Vince:VRF:Options-1").tPackage
-	ReadyCheck = Apollo.GetPackage("Vince:VRF:ReadyCheck-1").tPackage
-	Member = Apollo.GetPackage("Vince:VRF:Member-1").tPackage
-	ContextMenu = Apollo.GetPackage("Vince:VRF:ContextMenu-1").tPackage
-	Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
+	self.Options:Init(self)
+	self.ReadyCheck:Init(self)
+	self.Member:Init(self)
+	self.ContextMenu:Init(self)
+	self.Utilities:Init(self)
 
 	self.onLoadDelayTimer = ApolloTimer.Create(.5, true, "OnLoadForReal", self)
 end
@@ -166,9 +165,9 @@ function VinceRaidFrames:OnLoadForReal()
 		return
 	end
 
-	Options.parent = self
-	Options.settings = self.settings
-	ReadyCheck.callback = {"OnReadyCheckTimeout", self}
+	self.Options.parent = self
+	self.Options.settings = self.settings
+	self.ReadyCheck.callback = {"OnReadyCheckTimeout", self}
 
 	ApolloRegisterEventHandler("Group_Join", "OnGroup_Join", self)
 	ApolloRegisterEventHandler("Group_Left", "OnGroup_Left", self)
@@ -270,7 +269,7 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
 	self:ShareAddonVersion()
 
-	self.groupContextMenu = ContextMenu:new(self.xmlDoc, {
+	self.groupContextMenu = self.ContextMenu:new(self.xmlDoc, {
 		{
 			GetLabel = function ()
 				return "Move Up"
@@ -411,7 +410,7 @@ function VinceRaidFrames:OnWindowManagementReady()
 end
 
 function VinceRaidFrames:OnDocLoaded_Options()
-	Options:Show(self.xmlDoc)
+	self.Options:Show(self.xmlDoc)
 end
 
 function VinceRaidFrames:OnConfigure()
@@ -431,7 +430,7 @@ end
 
 
 function VinceRaidFrames:OnGroup_ReadyCheck(index, message)
-	ReadyCheck:Show(self.xmlDoc, index, message)
+	self.ReadyCheck:Show(self.xmlDoc, index, message)
 	self.readyCheckActive = true
 	for name, member in pairs(self.members) do
 		member:SetReadyCheckMode()
@@ -519,7 +518,7 @@ function VinceRaidFrames:BuildMembers()
 		local name = groupMember and groupMember.strCharacterName or unit:GetName() -- SetPlayerView only returns Unit and not a GroupMember
 		local member = self.members[name]
 		if not member then
-			member = Member:new(unit, groupMember, self)
+			member = self.Member:new(unit, groupMember, self)
 			self.members[name] = member
 		end
 		newMembers[name] = true
@@ -933,6 +932,13 @@ function VinceRaidFrames:UpdateColorBy()
 	end
 end
 
+function VinceRaidFrames:UpdateClassColors()
+	for name, member in pairs(self.members) do
+		member.classColor = self.settings.classColors[member.classId]
+		member:UpdateColorBy(self.settings.colorBy)
+	end
+end
+
 
 function VinceRaidFrames:OnCombatLogCCState(e)
 	if e.nInterruptArmorHit > 0 and e.unitCaster and not WrongInterruptBaseSpellIds[e.splCallingSpell:GetBaseSpellId()] then
@@ -1188,9 +1194,13 @@ function VinceRaidFrames:OnSave(eType)
 		return
 	end
 
-	-- Explicitly set names in self.settings
-	if not rawget(self.settings, "names") then
-		rawset(self.settings, "names", self.settings.names)
+	-- Explicitly set keys in self.settings
+	for key, value in pairs(self.defaultSettings) do
+		if type(value) == "table" then
+			if not rawget(self.settings, key) then
+				rawset(self.settings, key, self.settings[key])
+			end
+		end
 	end
 
 	return self.settings
@@ -1207,7 +1217,7 @@ end
 
 
 function VinceRaidFrames:OnDocLoaded_Toggle()
-	Options:Toggle(self.xmlDoc)
+	self.Options:Toggle(self.xmlDoc)
 end
 
 function VinceRaidFrames:OnToggleVinceRaidFrames()

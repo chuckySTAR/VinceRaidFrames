@@ -1,7 +1,11 @@
+local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
+
 local knReadyCheckTimeout = 60 -- in seconds
 
 local ReadyCheck = {}
-function ReadyCheck:OnLoad()
+function ReadyCheck:Init(parent)
+	Apollo.LinkAddon(parent, self)
+
 	self.callback = nil
 	self.wndMain = nil
 
@@ -42,4 +46,4 @@ function ReadyCheck:OnReadyCheckTimeout()
 	self.callback[2][self.callback[1]](self.callback[2])
 end
 
-Apollo.RegisterPackage(ReadyCheck, "Vince:VRF:ReadyCheck-1", 1, {})
+VinceRaidFrames.ReadyCheck = ReadyCheck

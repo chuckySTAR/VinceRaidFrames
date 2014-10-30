@@ -1,5 +1,5 @@
 local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
-local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
+local Utilities = VinceRaidFrames.Utilities
 
 local WindowLocationNew = WindowLocation.new
 
@@ -43,7 +43,9 @@ local MarkerPixie = {
 
 local Member = {}
 Member.__index = Member
-function Member:OnLoad()
+function Member:Init(parent)
+	Apollo.LinkAddon(parent, self)
+
 	self.previousTarget = nil
 end
 function Member:new(unit, groupMember, parent)
@@ -82,12 +84,12 @@ function Member:new(unit, groupMember, parent)
 	}
 	setmetatable(o, self)
 
-	o:Init(parent.wndMain)
+	o:Build(parent.wndMain)
 
 	return o
 end
 
-function Member:Init(parent)
+function Member:Build(parent)
 	self.frame = Apollo.LoadForm(self.xmlDoc, "Member", parent, Member)
 
 	self.classColor = self.settings.classColors[self.classId]
@@ -570,4 +572,4 @@ function Member:Destroy()
 	self.frame:Destroy()
 end
 
-Apollo.RegisterPackage(Member, "Vince:VRF:Member-1", 1, {})
+VinceRaidFrames.Member = Member

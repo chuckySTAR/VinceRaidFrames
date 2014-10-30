@@ -1,10 +1,10 @@
 local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
+local Utilities = VinceRaidFrames.Utilities
 
 local floor = math.floor
 local tostring = tostring
 local tonumber = tonumber
 
-local Utilities = Apollo.GetPackage("Vince:VRF:Utilities-1").tPackage
 local GeminiLocale = Apollo.GetPackage("Gemini:Locale-1.0").tPackage
 local L = GeminiLocale:GetLocale("VinceRaidFrames", true)
 
@@ -27,7 +27,9 @@ local NamingModeIdToName = {
 }
 
 local Options = {}
-function Options:OnLoad()
+function Options:Init(parent)
+	Apollo.LinkAddon(parent, self)
+
 	self.parent = nil
 	self.settings = nil
 	self.xmlDoc = nil
@@ -93,104 +95,110 @@ function Options:Show(xmlDoc)
 end
 
 function Options:OnCategorySelect(wndHandler)
-	if self.activeCategory ~= wndHandler:GetName() then
-		self.activeCategory = wndHandler:GetName()
-		self.content:DestroyChildren()
-		local options = Apollo.LoadForm(self.xmlDoc, "Options" .. wndHandler:GetName(), self.content, self)
-		self.options = options
-		if options then
-			GeminiLocale:TranslateWindow(L, self.wndMain)
+	local categoryName = wndHandler:GetName()
+--	if self.activeCategory ~= wndHandler:GetName() then
+	
+	self.activeCategory = categoryName
+	self.content:DestroyChildren()
+	local options = Apollo.LoadForm(self.xmlDoc, "Options" .. categoryName, self.content, self)
+	self.options = options
+	if options then
+		GeminiLocale:TranslateWindow(L, self.wndMain)
 
-			if wndHandler:GetName() == "General" then
-				self.refreshIntervalSliderWidget = self:InitSliderWidget(options:FindChild("RefreshInterval"), self.refreshIntervalMin, self.refreshIntervalMax, self.refreshIntervalTick, self.settings.refreshInterval, 2, function (value)
-					self.settings.refreshInterval = value
-					self.parent.timer:Set(value)
-				end)
-				self.memberColumnsSliderWidget = self:InitSliderWidget(options:FindChild("Columns"), self.memberColumnsMin, self.memberColumnsMax, self.memberColumnsTick, self.settings.memberColumns, 0, function (value)
-					self.settings.memberColumns = value
-					self.parent:ArrangeMembers()
-				end)
-				options:FindChild("HideInGroups"):SetCheck(self.settings.hideInGroups)
+		if categoryName == "General" then
+			self.refreshIntervalSliderWidget = self:InitSliderWidget(options:FindChild("RefreshInterval"), self.refreshIntervalMin, self.refreshIntervalMax, self.refreshIntervalTick, self.settings.refreshInterval, 2, function (value)
+				self.settings.refreshInterval = value
+				self.parent.timer:Set(value)
+			end)
+			self.memberColumnsSliderWidget = self:InitSliderWidget(options:FindChild("Columns"), self.memberColumnsMin, self.memberColumnsMax, self.memberColumnsTick, self.settings.memberColumns, 0, function (value)
+				self.settings.memberColumns = value
+				self.parent:ArrangeMembers()
+			end)
+			options:FindChild("HideInGroups"):SetCheck(self.settings.hideInGroups)
 
-				options:FindChild("SortByClass"):SetData(1)
-				options:FindChild("SortByRole"):SetData(2)
-				options:FindChild("SortByName"):SetData(3)
-				options:FindChild("SortByOrder"):SetData(4)
-				options:FindChild(SortIdToName[self.settings.sortBy]):SetCheck(true)
-			elseif wndHandler:GetName() == "MemberCell" then
-				options:FindChild("ColorByClass"):SetData(VinceRaidFrames.ColorBy.Class)
-				options:FindChild("ColorByHealth"):SetData(VinceRaidFrames.ColorBy.Health)
-				options:FindChild(ColorIdToName[self.settings.colorBy]):SetCheck(true)
+			options:FindChild("SortByClass"):SetData(1)
+			options:FindChild("SortByRole"):SetData(2)
+			options:FindChild("SortByName"):SetData(3)
+			options:FindChild("SortByOrder"):SetData(4)
+			options:FindChild(SortIdToName[self.settings.sortBy]):SetCheck(true)
+		elseif categoryName == "MemberCell" then
+			options:FindChild("ColorByClass"):SetData(VinceRaidFrames.ColorBy.Class)
+			options:FindChild("ColorByHealth"):SetData(VinceRaidFrames.ColorBy.Health)
+			options:FindChild(ColorIdToName[self.settings.colorBy]):SetCheck(true)
 
-				options:FindChild("ShieldsBelowHealth"):SetCheck(self.settings.memberShieldsBelowHealth)
-				options:FindChild("ClassIcon"):SetCheck(self.settings.memberShowClassIcon)
-				options:FindChild("TargetOnHover"):SetCheck(self.settings.targetOnHover)
-				options:FindChild("HintArrowOnHover"):SetCheck(self.settings.hintArrowOnHover)
-				options:FindChild("FixedShieldLength"):SetCheck(true)
-				options:FindChild("FixedShieldLength"):Enable(false)
+			options:FindChild("ShieldsBelowHealth"):SetCheck(self.settings.memberShieldsBelowHealth)
+			options:FindChild("ClassIcon"):SetCheck(self.settings.memberShowClassIcon)
+			options:FindChild("TargetOnHover"):SetCheck(self.settings.targetOnHover)
+			options:FindChild("HintArrowOnHover"):SetCheck(self.settings.hintArrowOnHover)
+			options:FindChild("FixedShieldLength"):SetCheck(true)
+			options:FindChild("FixedShieldLength"):Enable(false)
 
-				self:ToggleShieldWidthHeight()
+			self:ToggleShieldWidthHeight()
 
-				self.memberHeight = self:InitSliderWidget(options:FindChild("Height"), self.memberHeightMin, self.memberHeightMax, self.memberHeightTick, self.settings.memberHeight, 0, function (value)
-					self.settings.memberHeight = value
-					self.parent:ArrangeMemberFrames()
-					self.parent:ArrangeMembers()
-				end)
-				self.memberWidth = self:InitSliderWidget(options:FindChild("Width"), self.memberWidthMin, self.memberWidthMax, self.memberWidthTick, self.settings.memberWidth, 0, function (value)
-					self.settings.memberWidth = value
-					self.parent:ArrangeMemberFrames()
-					self.parent:ArrangeMembers()
-				end)
+			self.memberHeight = self:InitSliderWidget(options:FindChild("Height"), self.memberHeightMin, self.memberHeightMax, self.memberHeightTick, self.settings.memberHeight, 0, function (value)
+				self.settings.memberHeight = value
+				self.parent:ArrangeMemberFrames()
+				self.parent:ArrangeMembers()
+			end)
+			self.memberWidth = self:InitSliderWidget(options:FindChild("Width"), self.memberWidthMin, self.memberWidthMax, self.memberWidthTick, self.settings.memberWidth, 0, function (value)
+				self.settings.memberWidth = value
+				self.parent:ArrangeMemberFrames()
+				self.parent:ArrangeMembers()
+			end)
 
 
-				self.memberShieldWidth = self:InitSliderWidget(options:FindChild("ShieldWidth"), self.memberShieldWidthMin, self.memberShieldWidthMax, self.memberShieldWidthTick, self.settings.memberShieldWidth, 0, function (value)
-					self.settings.memberShieldWidth = value
-					self.parent:ArrangeMemberFrames()
-					self.parent:ArrangeMembers()
-				end)
-				self.memberAbsorbWidth = self:InitSliderWidget(options:FindChild("AbsorbWidth"), self.memberAbsorbWidthMin, self.memberAbsorbWidthMax, self.memberAbsorbWidthTick, self.settings.memberAbsorbWidth, 0, function (value)
-					self.settings.memberAbsorbWidth = value
-					self.parent:ArrangeMemberFrames()
-					self.parent:ArrangeMembers()
-				end)
+			self.memberShieldWidth = self:InitSliderWidget(options:FindChild("ShieldWidth"), self.memberShieldWidthMin, self.memberShieldWidthMax, self.memberShieldWidthTick, self.settings.memberShieldWidth, 0, function (value)
+				self.settings.memberShieldWidth = value
+				self.parent:ArrangeMemberFrames()
+				self.parent:ArrangeMembers()
+			end)
+			self.memberAbsorbWidth = self:InitSliderWidget(options:FindChild("AbsorbWidth"), self.memberAbsorbWidthMin, self.memberAbsorbWidthMax, self.memberAbsorbWidthTick, self.settings.memberAbsorbWidth, 0, function (value)
+				self.settings.memberAbsorbWidth = value
+				self.parent:ArrangeMemberFrames()
+				self.parent:ArrangeMembers()
+			end)
 
-				self.memberShieldHeight = self:InitSliderWidget(options:FindChild("ShieldHeight"), self.memberShieldHeightMin, self.memberShieldHeightMax, self.memberShieldHeightTick, self.settings.memberShieldHeight, 0, function (value)
-					self.settings.memberShieldHeight = value
-					self.parent:ArrangeMemberFrames()
-					self.parent:ArrangeMembers()
-				end)
-				self.memberAbsorbHeight = self:InitSliderWidget(options:FindChild("AbsorbHeight"), self.memberAbsorbHeightMin, self.memberAbsorbHeightMax, self.memberAbsorbHeightTick, self.settings.memberAbsorbHeight, 0, function (value)
-					self.settings.memberAbsorbHeight = value
-					self.parent:ArrangeMemberFrames()
-					self.parent:ArrangeMembers()
-				end)
+			self.memberShieldHeight = self:InitSliderWidget(options:FindChild("ShieldHeight"), self.memberShieldHeightMin, self.memberShieldHeightMax, self.memberShieldHeightTick, self.settings.memberShieldHeight, 0, function (value)
+				self.settings.memberShieldHeight = value
+				self.parent:ArrangeMemberFrames()
+				self.parent:ArrangeMembers()
+			end)
+			self.memberAbsorbHeight = self:InitSliderWidget(options:FindChild("AbsorbHeight"), self.memberAbsorbHeightMin, self.memberAbsorbHeightMax, self.memberAbsorbHeightTick, self.settings.memberAbsorbHeight, 0, function (value)
+				self.settings.memberAbsorbHeight = value
+				self.parent:ArrangeMemberFrames()
+				self.parent:ArrangeMembers()
+			end)
 
-				local paddingLeft = options:FindChild("PaddingLeft")
-				local paddingTop = options:FindChild("PaddingTop")
-				local paddingRight = options:FindChild("PaddingRight")
-				local paddingBottom = options:FindChild("PaddingBottom")
-				paddingLeft:SetText(self.settings.memberPaddingLeft)
-				paddingLeft:SetData("memberPaddingLeft")
-				paddingTop:SetText(self.settings.memberPaddingTop)
-				paddingTop:SetData("memberPaddingTop")
-				paddingRight:SetText(self.settings.memberPaddingRight)
-				paddingRight:SetData("memberPaddingRight")
-				paddingBottom:SetText(self.settings.memberPaddingBottom)
-				paddingBottom:SetData("memberPaddingBottom")
+			local paddingLeft = options:FindChild("PaddingLeft")
+			local paddingTop = options:FindChild("PaddingTop")
+			local paddingRight = options:FindChild("PaddingRight")
+			local paddingBottom = options:FindChild("PaddingBottom")
+			paddingLeft:SetText(self.settings.memberPaddingLeft)
+			paddingLeft:SetData("memberPaddingLeft")
+			paddingTop:SetText(self.settings.memberPaddingTop)
+			paddingTop:SetData("memberPaddingTop")
+			paddingRight:SetText(self.settings.memberPaddingRight)
+			paddingRight:SetData("memberPaddingRight")
+			paddingBottom:SetText(self.settings.memberPaddingBottom)
+			paddingBottom:SetData("memberPaddingBottom")
 
-			elseif wndHandler:GetName() == "Colors" then
-				self:InitColorWidget(options:FindChild("WarriorColor"), options:FindChild("WarriorLabel"), self.settings.classColors[GameLib.CodeEnumClass.Warrior])
-			elseif wndHandler:GetName() == "Names" then
-				options:FindChild("NamingModeDefault"):SetData(VinceRaidFrames.NamingMode.Default)
-				options:FindChild("NamingModeShorten"):SetData(VinceRaidFrames.NamingMode.Shorten)
-				options:FindChild("NamingModeCustom"):SetData(VinceRaidFrames.NamingMode.Custom)
-				options:FindChild(NamingModeIdToName[self.settings.namingMode]):SetCheck(true)
+		elseif categoryName == "Colors" then
+			self:InitColorWidget(options:FindChild("WarriorColor"), options:FindChild("WarriorLabel"), GameLib.CodeEnumClass.Warrior)
+			self:InitColorWidget(options:FindChild("EngineerColor"), options:FindChild("EngineerLabel"), GameLib.CodeEnumClass.Engineer)
+			self:InitColorWidget(options:FindChild("EsperColor"), options:FindChild("EsperLabel"), GameLib.CodeEnumClass.Esper)
+			self:InitColorWidget(options:FindChild("MedicColor"), options:FindChild("MedicLabel"), GameLib.CodeEnumClass.Medic)
+			self:InitColorWidget(options:FindChild("StalkerColor"), options:FindChild("StalkerLabel"), GameLib.CodeEnumClass.Stalker)
+			self:InitColorWidget(options:FindChild("SpellslingerColor"), options:FindChild("SpellslingerLabel"), GameLib.CodeEnumClass.Spellslinger)
+		elseif categoryName == "Names" then
+			options:FindChild("NamingModeDefault"):SetData(VinceRaidFrames.NamingMode.Default)
+			options:FindChild("NamingModeShorten"):SetData(VinceRaidFrames.NamingMode.Shorten)
+			options:FindChild("NamingModeCustom"):SetData(VinceRaidFrames.NamingMode.Custom)
+			options:FindChild(NamingModeIdToName[self.settings.namingMode]):SetCheck(true)
 
-				self:FillCustomNamesGrid()
-			elseif wndHandler:GetName() == "Indicators" then
-				local grid = options:FindChild("IndicatorsGrid")
+			self:FillCustomNamesGrid()
+		elseif categoryName == "Indicators" then
+			local grid = options:FindChild("IndicatorsGrid")
 
-			end
 		end
 	end
 end
@@ -340,9 +348,30 @@ function Options:InitSliderWidget(frame, min, max, tick, value, roundDigits, cal
 	return frame
 end
 
-function Options:InitColorWidget(editBox, label, value)
-	editBox:SetText()
-	label:SetTextColor()
+function Options:InitColorWidget(editBox, label, key)
+	local value = self.settings.classColors[key]
+	editBox:SetText(value)
+	editBox:SetData({label, key})
+	editBox:SetMaxTextLength(6)
+	label:SetTextColor("ff" .. value)
+end
+
+function Options:OnClassColorChanged(wndHandler)
+	local text = wndHandler:GetText()
+	local label, key = unpack(wndHandler:GetData())
+	local value = tonumber(text, 16) and "ff" .. text or "ffffffff"
+	self.settings.classColors[key] = value
+	label:SetTextColor(value)
+	self.parent:UpdateClassColors()
+end
+
+function Options:OnResetColors()
+	Print("oke?")
+	self.settings.classColors = nil
+	local colors = self.wndMain:FindChild("Colors")
+	colors:SetCheck(true)
+	self:OnCategorySelect(colors)
+	self.parent:UpdateClassColors()
 end
 
 function Options:OnSliderWidget(wndHandler, wndControl, value)
@@ -373,13 +402,4 @@ function Options:OnMemberPadding(wndHandler)
 	self.parent:ArrangeMembers()
 end
 
-
-
--- a, r, g, b
-function Options.HexToNumbers(hex)
-	hex = tonumber(hex, 16) or 0
-	return bit.rshift(hex, 24) / 255, bit.band(bit.rshift(hex, 16), 0xff) / 255, bit.band(bit.rshift(hex, 8), 0xff) / 255, bit.band(hex, 0xff) / 255
-end
-
-
-Apollo.RegisterPackage(Options, "Vince:VRF:Options-1", 1, {})
+VinceRaidFrames.Options = Options
