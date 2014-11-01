@@ -71,6 +71,8 @@ function VinceRaidFrames:new(o)
 	o.mobsInCombat = {}
 	o.groupFrames = {}
 	o.leader = ""
+	o.bIsLeader = false
+	o.bIsAssist = false
 	o.editMode = false -- dragndrop of members
 	o.addonVersionAnnounceTimer = nil
 
@@ -464,6 +466,7 @@ function VinceRaidFrames:OnTargetUnitChanged(unit)
 end
 
 function VinceRaidFrames:OnRefresh()
+	local strPlayerName = GameLib.GetPlayerUnit():GetName()
 	local count = GroupLibGetMemberCount()
 	for i = 1, count do
 		local unit = GroupLibGetUnitForGroupMember(i)
@@ -489,11 +492,14 @@ function VinceRaidFrames:OnRefresh()
 			end
 			self.leader = groupMember.strCharacterName
 		end
+		if groupMember and groupMember.strCharacterName == strPlayerName then
+			self.bIsLeader = groupMember.bIsLeader
+			self.bIsAssist = groupMember.bMainAssist or groupMember.bMainTank or groupMember.bRaidAssistant
+		end
 	end
 
-	local isLeader = GroupLib.AmILeader()
-	self.wndRaidLeaderOptionsBtn:Show(GroupLib.InRaid() and self:IsLeaderOrAssist(GameLib.GetPlayerUnit():GetName()))
-	self.wndRaidMasterLootBtn:Show(isLeader)
+	self.wndRaidLeaderOptionsBtn:Show(GroupLib.InRaid() and (self.bIsLeader or self.bIsAssist))
+	self.wndRaidMasterLootBtn:Show(self.bIsLeader)
 
 	self:RefreshAggroIndicators()
 end
@@ -887,7 +893,7 @@ function VinceRaidFrames:OnGroupToggle()
 end
 
 function VinceRaidFrames:OnGroupMouseBtnUp(wndHandler, wndControl, eMouseButton)
-	if self:IsLeaderOrAssist(GameLib.GetPlayerUnit():GetName()) and eMouseButton == GameLib.CodeEnumInputMouse.Right then
+	if (self.bIsLeader or self.bIsAssist) and eMouseButton == GameLib.CodeEnumInputMouse.Right then
 		self.groupContextMenu:Show(wndHandler:GetParent():GetData().index)
 	end
 end
@@ -1006,7 +1012,7 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 
 		self:UpdateRoleButtons()
 
-		local bCanEdit = self:IsLeaderOrAssist(GameLib.GetPlayerUnit():GetName())
+		local bCanEdit = self.bIsLeader or self.bIsAssist
 		self.editMode = bCanEdit
 		self.wndDragDropLabel:Show(bCanEdit, true)
 
