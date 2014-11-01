@@ -492,7 +492,7 @@ function VinceRaidFrames:OnRefresh()
 	end
 
 	local isLeader = GroupLib.AmILeader()
-	self.wndRaidLeaderOptionsBtn:Show(GroupLib.InRaid() and isLeader)
+	self.wndRaidLeaderOptionsBtn:Show(GroupLib.InRaid() and self:IsLeaderOrAssist(GameLib.GetPlayerUnit():GetName()))
 	self.wndRaidMasterLootBtn:Show(isLeader)
 
 	self:RefreshAggroIndicators()
