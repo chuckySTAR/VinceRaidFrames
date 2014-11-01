@@ -197,10 +197,10 @@ function VinceRaidFrames:OnLoadForReal()
 	ApolloRegisterEventHandler("UnitEnteredCombat", "OnUnitEnteredCombat", self)
 	ApolloRegisterEventHandler("UnitCreated", "OnUnitCreated", self)
 	ApolloRegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
-	
+
 	ApolloRegisterEventHandler("CombatLogCCState", "OnCombatLogCCState", self)
 	ApolloRegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
-	
+
 	ApolloRegisterSlashCommand("vrf", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("vinceraidframes", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("rw", "OnSlashRaidWarning", self)
@@ -213,7 +213,7 @@ function VinceRaidFrames:OnLoadForReal()
 	end
 
 	-- ready check
-	
+
 	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Raid Frames", {"ToggleVinceRaidFrames", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
 	Event_FireGenericEvent("AddonFullyLoaded", {addon = self, strName = "VinceRaidFrames"})
 end
@@ -876,7 +876,7 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
 		end
 		return
 	end
-	if self:IsLeader(sender) and self:ValidateGroups(message) then
+	if self:IsLeaderOrAssist(sender) and self:ValidateGroups(message) then
 		self.settings.groups = message
 		self:ArrangeMembers()
 	end
@@ -1006,9 +1006,9 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 
 		self:UpdateRoleButtons()
 
-		local leader = GroupLib.AmILeader()
-		self.editMode = leader
-		self.wndDragDropLabel:Show(leader, true)
+		local bCanEdit = self:IsLeaderOrAssist(GameLib.GetPlayerUnit():GetName())
+		self.editMode = bCanEdit
+		self.wndDragDropLabel:Show(bCanEdit, true)
 
 		self:SetLocked(false)
 
@@ -1018,6 +1018,18 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 		self.editMode = false
 		self:SetLocked(self.settings.locked)
 	end
+end
+
+function VinceRaidFrames:IsLeaderOrAssist(strMemberName)
+	local bIsLeader, bIsAssist = false, false
+	for i = 1, GroupLib.GetMemberCount(), 1 do
+	  local tGroupMember = GroupLib.GetGroupMember(i)
+	  if strMemberName == tGroupMember.strCharacterName  then
+	  	bIsLeader = tGroupMember.bIsLeader
+	  	bIsAssist = tGroupMember.bMainAssist or tGroupMember.bMainTank or tGroupMember.bRaidAssistant
+	  end
+	end
+	return bIsLeader or bIsAssist
 end
 
 function VinceRaidFrames:UpdateRoleButtons()
