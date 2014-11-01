@@ -887,7 +887,7 @@ function VinceRaidFrames:OnGroupToggle()
 end
 
 function VinceRaidFrames:OnGroupMouseBtnUp(wndHandler, wndControl, eMouseButton)
-	if GroupLib.AmILeader() and eMouseButton == GameLib.CodeEnumInputMouse.Right then
+	if self:IsLeaderOrAssist(GameLib.GetPlayerUnit():GetName()) and eMouseButton == GameLib.CodeEnumInputMouse.Right then
 		self.groupContextMenu:Show(wndHandler:GetParent():GetData().index)
 	end
 end
