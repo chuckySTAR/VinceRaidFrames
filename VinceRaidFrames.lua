@@ -1,9 +1,11 @@
-local function log(name, value)
-	if SendVarToRover then
-		Print(name)
-		SendVarToRover(name, value, 0)
-	end
-end
+--abcd = {}
+--local function log(name, value)
+--	abcd[name] = value
+--	if SendVarToRover then
+--		Print(name)
+--		SendVarToRover(name, value, 0)
+--	end
+--end
 
 require "Window"
 require "GameLib"
@@ -80,6 +82,7 @@ function VinceRaidFrames:new(o)
 	self.Utilities = nil
 
 	o.defaultSettings = {
+		names = {},
 		classColors = {
 			[GameLib.CodeEnumClass.Warrior] = "F54F4F",
 			[GameLib.CodeEnumClass.Engineer] = "EFAB48",
@@ -380,7 +383,6 @@ function VinceRaidFrames:OnDocLoaded_Main()
 			end
 		}
 	})
-
 	self:SetLocked(self.settings.locked)
 
 	self:Show()
