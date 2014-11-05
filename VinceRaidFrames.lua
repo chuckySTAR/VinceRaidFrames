@@ -383,6 +383,7 @@ function VinceRaidFrames:OnDocLoaded_Main()
 			end
 		}
 	})
+
 	self:SetLocked(self.settings.locked)
 
 	self:Show()
