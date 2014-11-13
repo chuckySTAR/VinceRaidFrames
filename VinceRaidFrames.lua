@@ -69,6 +69,8 @@ function VinceRaidFrames:new(o)
 	o.mobsInCombat = {}
 	o.groupFrames = {}
 	o.leader = ""
+	o.bIsLeader = false
+	o.bIsAssist = false
 	o.editMode = false -- dragndrop of members
 	o.addonVersionAnnounceTimer = nil
 
@@ -196,10 +198,10 @@ function VinceRaidFrames:OnLoadForReal()
 	ApolloRegisterEventHandler("UnitEnteredCombat", "OnUnitEnteredCombat", self)
 	ApolloRegisterEventHandler("UnitCreated", "OnUnitCreated", self)
 	ApolloRegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
-	
+
 	ApolloRegisterEventHandler("CombatLogCCState", "OnCombatLogCCState", self)
 	ApolloRegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
-	
+
 	ApolloRegisterSlashCommand("vrf", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("vinceraidframes", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("rw", "OnSlashRaidWarning", self)
@@ -212,7 +214,7 @@ function VinceRaidFrames:OnLoadForReal()
 	end
 
 	-- ready check
-	
+
 	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Raid Frames", {"ToggleVinceRaidFrames", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
 	Event_FireGenericEvent("AddonFullyLoaded", {addon = self, strName = "VinceRaidFrames"})
 end
@@ -469,6 +471,7 @@ function VinceRaidFrames:OnTargetUnitChanged(unit)
 end
 
 function VinceRaidFrames:OnRefresh()
+	local strPlayerName = GameLib.GetPlayerUnit():GetName()
 	local count = GroupLibGetMemberCount()
 	for i = 1, count do
 		local unit = GroupLibGetUnitForGroupMember(i)
@@ -494,11 +497,14 @@ function VinceRaidFrames:OnRefresh()
 			end
 			self.leader = groupMember.strCharacterName
 		end
+		if groupMember and groupMember.strCharacterName == strPlayerName then
+			self.bIsLeader = groupMember.bIsLeader
+			self.bIsAssist = groupMember.bMainAssist or groupMember.bMainTank or groupMember.bRaidAssistant
+		end
 	end
 
-	local isLeader = GroupLib.AmILeader()
-	self.wndRaidLeaderOptionsBtn:Show(GroupLib.InRaid() and isLeader)
-	self.wndRaidMasterLootBtn:Show(isLeader)
+	self.wndRaidLeaderOptionsBtn:Show(GroupLib.InRaid() and (self.bIsLeader or self.bIsAssist))
+	self.wndRaidMasterLootBtn:Show(self.bIsLeader)
 
 	self:RefreshAggroIndicators()
 end
@@ -881,7 +887,7 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
 		end
 		return
 	end
-	if self:IsLeader(sender) and self:ValidateGroups(message) then
+	if self:IsLeaderOrAssist(sender) and self:ValidateGroups(message) then
 		self.settings.groups = message
 		self:ArrangeMembers()
 	end
@@ -892,7 +898,7 @@ function VinceRaidFrames:OnGroupToggle()
 end
 
 function VinceRaidFrames:OnGroupMouseBtnUp(wndHandler, wndControl, eMouseButton)
-	if GroupLib.AmILeader() and eMouseButton == GameLib.CodeEnumInputMouse.Right then
+	if (self.bIsLeader or self.bIsAssist) and eMouseButton == GameLib.CodeEnumInputMouse.Right then
 		self.groupContextMenu:Show(wndHandler:GetParent():GetData().index)
 	end
 end
@@ -1011,9 +1017,9 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 
 		self:UpdateRoleButtons()
 
-		local leader = GroupLib.AmILeader()
-		self.editMode = leader
-		self.wndDragDropLabel:Show(leader, true)
+		local bCanEdit = self.bIsLeader or self.bIsAssist
+		self.editMode = bCanEdit
+		self.wndDragDropLabel:Show(bCanEdit, true)
 
 		self:SetLocked(false)
 
@@ -1023,6 +1029,18 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 		self.editMode = false
 		self:SetLocked(self.settings.locked)
 	end
+end
+
+function VinceRaidFrames:IsLeaderOrAssist(strMemberName)
+	local bIsLeader, bIsAssist = false, false
+	for i = 1, GroupLib.GetMemberCount(), 1 do
+	  local tGroupMember = GroupLib.GetGroupMember(i)
+	  if strMemberName == tGroupMember.strCharacterName  then
+	  	bIsLeader = tGroupMember.bIsLeader
+	  	bIsAssist = tGroupMember.bMainAssist or tGroupMember.bMainTank or tGroupMember.bRaidAssistant
+	  end
+	end
+	return bIsLeader or bIsAssist
 end
 
 function VinceRaidFrames:UpdateRoleButtons()
