@@ -32,15 +32,6 @@ local tTargetMarkSpriteMap = {
 
 local FoodBuffName = GameLib.GetSpell(48443):GetName()
 
-local MarkerPixie = {
-	cr = "ffffffff",
-	loc = {
-		fPoints = {1, .5, 1, .5},
-		nOffsets = {-22, -10, -2, 10}
-	}
-}
-
-
 local Member = {}
 Member.__index = Member
 function Member:Init(parent)
@@ -63,7 +54,6 @@ function Member:new(unit, groupMember, parent)
 		classId = groupMember and groupMember.eClassId or unit:GetClassId(),
 		classColor = nil,
 		classIconPixie = nil,
-		targetMarkerPixie = nil,
 		hasAggro = false,
 		potionPixie = nil,
 		foodPixie = nil,

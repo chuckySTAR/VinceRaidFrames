@@ -14,8 +14,6 @@ require "ICCommLib"
 
 local VinceRaidFrames = {}
 
-local Utilities
-
 local pairs = pairs
 local ipairs = ipairs
 local max = math.max
@@ -76,7 +74,6 @@ function VinceRaidFrames:new(o)
 
 	-- files overwrite these
 	self.Options = nil
-	self.ReadyCheck = nil
 	self.Member = nil
 	self.ContextMenu = nil
 	self.Utilities = nil
@@ -154,7 +151,6 @@ end
 
 function VinceRaidFrames:OnLoad()
 	self.Options:Init(self)
-	self.ReadyCheck:Init(self)
 	self.Member:Init(self)
 	self.ContextMenu:Init(self)
 	self.Utilities:Init(self)
@@ -173,7 +169,6 @@ function VinceRaidFrames:OnLoadForReal()
 
 	self.Options.parent = self
 	self.Options.settings = self.settings
-	self.ReadyCheck.callback = {"OnReadyCheckTimeout", self}
 
 	ApolloRegisterEventHandler("Group_Join", "OnGroup_Join", self)
 	ApolloRegisterEventHandler("Group_Left", "OnGroup_Left", self)
@@ -190,6 +185,8 @@ function VinceRaidFrames:OnLoadForReal()
 	ApolloRegisterEventHandler("WindowManagementReady", "OnWindowManagementReady", self)
 	ApolloRegisterEventHandler("ToggleVinceRaidFrames", "OnToggleVinceRaidFrames", self)
 	ApolloRegisterEventHandler("MasterLootUpdate", "OnMasterLootUpdate", self)
+	ApolloRegisterEventHandler("Group_ReadyCheckCooldownExpired", "OnRaid_ReadyCheckTimeout", self)
+	Apollo.RegisterTimerHandler("Raid_ReadyCheckMaxTime", "OnRaid_ReadyCheckTimeout", self)
 
 	ApolloRegisterEventHandler("GenericEvent_Raid_UncheckMasterLoot", "OnUncheckMasterLoot", self)
 	ApolloRegisterEventHandler("GenericEvent_Raid_UncheckLeaderOptions", "OnUncheckLeaderOptions", self)
@@ -436,14 +433,16 @@ end
 
 
 function VinceRaidFrames:OnGroup_ReadyCheck(index, message)
-	self.ReadyCheck:Show(self.xmlDoc, index, message)
+	Apollo.AlertAppWindow()
+	Sound.Play(Sound.PlayUIQueuePopsAdventure)
+
 	self.readyCheckActive = true
 	for name, member in pairs(self.members) do
 		member:SetReadyCheckMode()
 	end
 end
 
-function VinceRaidFrames:OnReadyCheckTimeout()
+function VinceRaidFrames:OnRaid_ReadyCheckTimeout()
 	self.readyCheckActive = false
 	for name, member in pairs(self.members) do
 		member:UnsetReadyCheckMode()
@@ -1056,16 +1055,14 @@ function VinceRaidFrames:OnConfigSetAsHealerToggle(wndHandler, wndControl)
 end
 
 function VinceRaidFrames:OnStartReadyCheckBtn(wndHandler, wndControl) -- StartReadyCheckBtn
-	if not self.readyCheckActive then
-		local strMessage = self.wndMain:FindChild("RaidOptions:SelfConfigReadyCheckLabel:ReadyCheckMessageBG:ReadyCheckMessageEditBox"):GetText()
-		if string.len(strMessage) <= 0 then
-			strMessage = Apollo.GetString("RaidFrame_AreYouReady")
-		end
-
-		GroupLib.ReadyCheck(strMessage) -- Sanitized in code
-		self.wndMain:FindChild("RaidConfigureBtn"):SetCheck(false)
-		wndHandler:SetFocus() -- To remove out of edit box
+	local strMessage = self.wndMain:FindChild("RaidOptions:SelfConfigReadyCheckLabel:ReadyCheckMessageBG:ReadyCheckMessageEditBox"):GetText()
+	if string.len(strMessage) <= 0 then
+		strMessage = Apollo.GetString("RaidFrame_AreYouReady")
 	end
+
+	GroupLib.ReadyCheck(strMessage) -- Sanitized in code
+	self.wndMain:FindChild("RaidConfigureBtn"):SetCheck(false)
+	wndHandler:SetFocus() -- To remove out of edit box
 end
 
 function VinceRaidFrames:OnRaidLeaveShowPrompt(wndHandler, wndControl)
