@@ -133,6 +133,7 @@ function VinceRaidFrames:new(o)
 		groups = nil,
 		refreshInterval = .3,
 		interruptFlashDuration = 2.5,
+		readyCheckTimeout = 60,
 		locked = false,
 		hideInGroups = false,
 		namingMode = VinceRaidFrames.NamingMode.Shorten
@@ -185,8 +186,9 @@ function VinceRaidFrames:OnLoadForReal()
 	ApolloRegisterEventHandler("WindowManagementReady", "OnWindowManagementReady", self)
 	ApolloRegisterEventHandler("ToggleVinceRaidFrames", "OnToggleVinceRaidFrames", self)
 	ApolloRegisterEventHandler("MasterLootUpdate", "OnMasterLootUpdate", self)
-	ApolloRegisterEventHandler("Group_ReadyCheckCooldownExpired", "OnRaid_ReadyCheckTimeout", self)
-	Apollo.RegisterTimerHandler("Raid_ReadyCheckMaxTime", "OnRaid_ReadyCheckTimeout", self)
+	Apollo.RegisterTimerHandler("VRF_ReadyCheckTimeout", "OnVRF_ReadyCheckTimeout", self)
+	Apollo.CreateTimer("VRF_ReadyCheckTimeout", self.settings.readyCheckTimeout, false)
+	Apollo.StopTimer("VRF_ReadyCheckTimeout")
 
 	ApolloRegisterEventHandler("GenericEvent_Raid_UncheckMasterLoot", "OnUncheckMasterLoot", self)
 	ApolloRegisterEventHandler("GenericEvent_Raid_UncheckLeaderOptions", "OnUncheckLeaderOptions", self)
@@ -436,13 +438,16 @@ function VinceRaidFrames:OnGroup_ReadyCheck(index, message)
 	Apollo.AlertAppWindow()
 	Sound.Play(Sound.PlayUIQueuePopsAdventure)
 
+	Apollo.StopTimer("VRF_ReadyCheckTimeout")
+	Apollo.StartTimer("VRF_ReadyCheckTimeout")
+
 	self.readyCheckActive = true
 	for name, member in pairs(self.members) do
 		member:SetReadyCheckMode()
 	end
 end
 
-function VinceRaidFrames:OnRaid_ReadyCheckTimeout()
+function VinceRaidFrames:OnVRF_ReadyCheckTimeout()
 	self.readyCheckActive = false
 	for name, member in pairs(self.members) do
 		member:UnsetReadyCheckMode()
