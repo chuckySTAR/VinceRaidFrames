@@ -163,6 +163,7 @@ function VinceRaidFrames:OnLoad()
 	self.Options.parent = self
 	self.Options.settings = self.settings
 
+	ApolloRegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
 	ApolloRegisterEventHandler("Group_Join", "OnGroup_Join", self)
 	ApolloRegisterEventHandler("Group_Left", "OnGroup_Left", self)
 	ApolloRegisterEventHandler("Group_Disbanded", "OnGroup_Disbanded", self)
@@ -205,8 +206,11 @@ function VinceRaidFrames:OnLoad()
 
 	-- ready check
 
-	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Raid Frames", {"ToggleVinceRaidFrames", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
 	Event_FireGenericEvent("AddonFullyLoaded", {addon = self, strName = "VinceRaidFrames"})
+end
+
+function VinceRaidFrames:OnInterfaceMenuListHasLoaded()
+	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Raid Frames", {"ToggleVinceRaidFrames", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
 end
 
 function VinceRaidFrames:SetPlayerView()
