@@ -1,8 +1,5 @@
---abcd = {}
 --local function log(name, value)
---	abcd[name] = value
 --	if SendVarToRover then
---		Print(name)
 --		SendVarToRover(name, value, 0)
 --	end
 --end
@@ -60,7 +57,7 @@ local WrongInterruptBaseSpellIds = {
 VinceRaidFrames.__index = VinceRaidFrames
 function VinceRaidFrames:new(o)
 	o = o or {}
-    setmetatable(o, self)
+	setmetatable(o, self)
 
 	o.onLoadDelayTimer = nil -- Dependencies in RegisterAddon do not *really* work
 	o.timer = nil -- Refresh timer
@@ -94,12 +91,19 @@ function VinceRaidFrames:new(o)
 			[36588] = "IconSprites:Icon_ItemMisc_potion_0002", -- Expert Moxie Boost
 			[35028] = "IconSprites:Icon_ItemMisc_potion_0002", -- Expert Brutality Boost
 			[36579] = "IconSprites:Icon_ItemMisc_potion_0003", -- Expert Tech Boost
-			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001" -- Expert Finesse Boost
+			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Expert Finesse Boost
 
---			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Liquid Focus - Reactive Strikethrough Boost
---
---			[37054] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Finesse Boost
---			[35062] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Brutality Boost
+			[36595] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Insight Boost
+			[38158] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Grit Boost
+			[36589] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Moxie Boost
+			[35029] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Brutality Boost
+			[36580] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Tech Boost
+			[36574] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Adventus Finesse Boost
+
+			--			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Liquid Focus - Reactive Strikethrough Boost
+			--
+			--			[37054] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Finesse Boost
+			--			[35062] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Brutality Boost
 		},
 		memberHeight = 26,
 		memberWidth = 104,
@@ -117,7 +121,7 @@ function VinceRaidFrames:new(o)
 		memberShowClassIcon = false,
 		memberShowTargetMarker = true,
 		memberIconSizes = 16,
-        memberFillLeftToRight = true,
+		memberFillLeftToRight = true,
 		memberOutOfRangeOpacity = .5,
 		memberShieldsBelowHealth = false,
 		memberShieldHeight = 1,
@@ -143,11 +147,11 @@ function VinceRaidFrames:new(o)
 		classColors = TableUtil:Copy(o.defaultSettings.classColors)
 	}, {__index = o.defaultSettings})
 
-    return o
+	return o
 end
 
 function VinceRaidFrames:Init()
-    Apollo.RegisterAddon(self, true, "Vince Raid Frames", {"ErrorDialog", "InterfaceMenuList"})
+	Apollo.RegisterAddon(self, true, "Vince Raid Frames", {})
 end
 
 function VinceRaidFrames:OnLoad()
@@ -155,18 +159,6 @@ function VinceRaidFrames:OnLoad()
 	self.Member:Init(self)
 	self.ContextMenu:Init(self)
 	self.Utilities:Init(self)
-
-	self.onLoadDelayTimer = ApolloTimer.Create(.5, true, "OnLoadForReal", self)
-end
-
-function VinceRaidFrames:OnLoadForReal()
-	local errorDialog = ApolloGetAddon("ErrorDialog")
-	local interfaceMenuList = ApolloGetAddon("InterfaceMenuList")
-	if errorDialog and errorDialog.wndReportBug and interfaceMenuList and interfaceMenuList.wndMain then
-		self.onLoadDelayTimer:Stop()
-	else
-		return
-	end
 
 	self.Options.parent = self
 	self.Options.settings = self.settings
@@ -196,10 +188,10 @@ function VinceRaidFrames:OnLoadForReal()
 	ApolloRegisterEventHandler("UnitEnteredCombat", "OnUnitEnteredCombat", self)
 	ApolloRegisterEventHandler("UnitCreated", "OnUnitCreated", self)
 	ApolloRegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
-	
+
 	ApolloRegisterEventHandler("CombatLogCCState", "OnCombatLogCCState", self)
 	ApolloRegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
-	
+
 	ApolloRegisterSlashCommand("vrf", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("vinceraidframes", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("rw", "OnSlashRaidWarning", self)
@@ -212,7 +204,7 @@ function VinceRaidFrames:OnLoadForReal()
 	end
 
 	-- ready check
-	
+
 	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Raid Frames", {"ToggleVinceRaidFrames", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
 	Event_FireGenericEvent("AddonFullyLoaded", {addon = self, strName = "VinceRaidFrames"})
 end
@@ -403,8 +395,8 @@ function VinceRaidFrames:Hide()
 		self.timer:Stop()
 		self.wndMain:Close()
 
---		self.wndMain:Destroy()
---		self.wndMain = nil
+		--		self.wndMain:Destroy()
+		--		self.wndMain = nil
 	end
 end
 
@@ -475,22 +467,16 @@ function VinceRaidFrames:OnRefresh()
 		local groupMember = GroupLibGetGroupMember(i)
 		local member = self.members[groupMember and groupMember.strCharacterName or (unit and unit:GetName())]
 		if member then
---			local wasOnline = member.online
 			member:Refresh(self.readyCheckActive, unit, groupMember)
-
-			-- member came online?
---			if not wasOnline and member.online then
---
---			end
 		end
 		if groupMember and groupMember.bIsLeader then
 			-- leader changed?
 			if self.leader ~= "" and self.leader ~= groupMember.strCharacterName then
 				-- close options window to update states
---				if self.wndRaidConfigureBtn:IsChecked() then
---					self.wndRaidConfigureBtn:SetCheck(false)
---					self.wndRaidConfigureBtn:SetCheck(true)
---				end
+				--				if self.wndRaidConfigureBtn:IsChecked() then
+				--					self.wndRaidConfigureBtn:SetCheck(false)
+				--					self.wndRaidConfigureBtn:SetCheck(true)
+				--				end
 			end
 			self.leader = groupMember.strCharacterName
 		end
