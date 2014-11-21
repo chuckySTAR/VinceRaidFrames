@@ -30,6 +30,27 @@ local tTargetMarkSpriteMap = {
 	"Icon_Windows_UI_CRB_Marker_UFO"
 }
 
+local Potions = {
+	[36594] = "IconSprites:Icon_ItemMisc_potion_0001", -- Expert Insight Boost
+	[38157] = "IconSprites:Icon_ItemMisc_potion_0001", -- Expert Grit Boost
+	[36588] = "IconSprites:Icon_ItemMisc_potion_0002", -- Expert Moxie Boost
+	[35028] = "IconSprites:Icon_ItemMisc_potion_0002", -- Expert Brutality Boost
+	[36579] = "IconSprites:Icon_ItemMisc_potion_0003", -- Expert Tech Boost
+	[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Expert Finesse Boost
+
+	[36595] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Insight Boost
+	[38158] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Grit Boost
+	[36589] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Moxie Boost
+	[35029] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Brutality Boost
+	[36580] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Tech Boost
+	[36574] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Adventus Finesse Boost
+
+	--			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Liquid Focus - Reactive Strikethrough Boost
+	--
+	--			[37054] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Finesse Boost
+	--			[35062] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Brutality Boost
+}
+
 local FoodBuffName = GameLib.GetSpell(48443):GetName()
 
 local Member = {}
@@ -309,7 +330,7 @@ function Member:RefreshBuffIcons()
 		local buffs = self.unit:GetBuffs()
 		if buffs then
 			for key, buff in ipairs(buffs.arBeneficial) do
-				local potionSprite = self.settings.potions[buff.splEffect:GetId()]
+				local potionSprite = Potions[buff.splEffect:GetId()]
 				local foodSprite = buff.splEffect:GetName() == FoodBuffName and "IconSprites:Icon_ItemMisc_UI_Item_Sammich"
 				if potionSprite then
 					potionFound = true

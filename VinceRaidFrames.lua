@@ -85,26 +85,6 @@ function VinceRaidFrames:new(o)
 			[GameLib.CodeEnumClass.Stalker] = "D23EF4",
 			[GameLib.CodeEnumClass.Spellslinger] = "98C723"
 		},
-		potions = {
-			[36594] = "IconSprites:Icon_ItemMisc_potion_0001", -- Expert Insight Boost
-			[38157] = "IconSprites:Icon_ItemMisc_potion_0001", -- Expert Grit Boost
-			[36588] = "IconSprites:Icon_ItemMisc_potion_0002", -- Expert Moxie Boost
-			[35028] = "IconSprites:Icon_ItemMisc_potion_0002", -- Expert Brutality Boost
-			[36579] = "IconSprites:Icon_ItemMisc_potion_0003", -- Expert Tech Boost
-			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Expert Finesse Boost
-
-			[36595] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Insight Boost
-			[38158] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Grit Boost
-			[36589] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Moxie Boost
-			[35029] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Brutality Boost
-			[36580] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Tech Boost
-			[36574] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Adventus Finesse Boost
-
-			--			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Liquid Focus - Reactive Strikethrough Boost
-			--
-			--			[37054] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Finesse Boost
-			--			[35062] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Brutality Boost
-		},
 		memberHeight = 26,
 		memberWidth = 104,
 		memberFont = "CRB_Interface9",
@@ -510,6 +490,10 @@ function VinceRaidFrames:RefreshAggroIndicators()
 end
 
 function VinceRaidFrames:BuildMembers()
+	if not self.wndMain then
+		return
+	end
+
 	local newMembers = {}
 	local count = GroupLibGetMemberCount()
 	for i = 1, count do
@@ -625,7 +609,7 @@ function VinceRaidFrames.SortByClass(a, b)
 end
 
 function VinceRaidFrames:ArrangeMembers()
-	if not GroupLib.InGroup() then
+	if not GroupLib.InGroup() or not self.wndMain then
 		return
 	end
 	if not self.settings.groups then
