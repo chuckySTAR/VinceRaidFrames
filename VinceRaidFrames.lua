@@ -745,6 +745,9 @@ function VinceRaidFrames:AddMemberToGroup(memberName, groupName)
 end
 
 function VinceRaidFrames:RemoveMemberFromGroup(memberName)
+	if type(self.settings.groups) ~= "table" then
+		return
+	end
 	for i, group in ipairs(self.settings.groups) do
 		for j, name in ipairs(group.members) do
 			if name == memberName then
