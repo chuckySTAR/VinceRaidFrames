@@ -1148,7 +1148,6 @@ function VinceRaidFrames:OnGroup_Remove(name) -- someone leaves
 end
 
 function VinceRaidFrames:OnGroup_Join() -- player joins
-	self.settings.groups = nil
 	self:Show()
 end
 
