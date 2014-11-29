@@ -307,6 +307,7 @@ function Member:RefreshTargetMarker(unit)
 				self.targetMarkerFrame:SetBGColor("ffffffff")
 				self.targetMarkerFrame:SetStyle("NoClip", true)
 				self.targetMarkerFrame:SetStyle("Picture", true)
+				self.targetMarkerFrame:SetStyle("NewWindowDepth", true)
 				self.targetMarkerFrame:SetAnchorPoints(1, .5, 1, .5)
 				self.targetMarkerFrame:SetAnchorOffsets(-22, -10, -2, 10)
 				self.targetMarkerFrame:SetSprite(sprite)
@@ -509,7 +510,7 @@ function Member:OnQueryDragDrop(wndHandler, wndControl, nX, nY, wndSource, strTy
 end
 
 function Member:OnQueryBeginDragDrop(wndHandler, wndControl, nX, nY)
-	if wndHandler:GetData().parent.editMode then
+	if wndHandler:GetData().parent.editMode or (GroupLib.AmILeader() and Apollo.IsAltKeyDown()) then
 		Apollo.BeginDragDrop(wndControl, "Member", "sprResourceBar_Sprint_RunIconSilver", 0)
 		return true
 	end

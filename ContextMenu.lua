@@ -9,13 +9,20 @@ local knYCursorOffset = 25
 local ContextMenu = {}
 ContextMenu.__index = ContextMenu
 function ContextMenu:new(xmlDoc, config)
-	local o = {
+	local o = setmetatable({
 		xmlDoc = xmlDoc,
 		config = config,
-		buttons = {},
 		value = nil
-	}
-	setmetatable(o, self)
+	}, self)
+
+	o.wndMain = Apollo.LoadForm(xmlDoc, "ContextMenu", "TooltipStratum", ContextMenu)
+	o.entryList = o.wndMain:FindChild("EntryList")
+	o.wndMain:SetData(o)
+	o.entryList:SetData(o)
+
+	if config.attachTo then
+		config.attachTo:AttachWindow(o.wndMain)
+	end
 
 	return o
 end
@@ -24,55 +31,127 @@ function ContextMenu:Init(parent)
 	Apollo.LinkAddon(parent, self)
 end
 
-function ContextMenu:Build()
-	self.wndMain = Apollo.LoadForm(self.xmlDoc, "ContextMenu", "TooltipStratum", ContextMenu)
-	self.wndMain:SetData(self)
-
-	for i, config in ipairs(self.config) do
-		local button = Apollo.LoadForm(self.xmlDoc, "BtnRegular", self.wndMain:FindChild("ButtonList"), ContextMenu)
-		button:SetData(config)
-		tinsert(self.buttons, button)
-	end
-end
-
 function ContextMenu:Show(value)
-	if not self.wndMain then
-		self:Build()
-	end
+	local alreadyShown = self.wndMain:IsShown()
+	self.entryList:DestroyChildren()
 
-	self.wndMain:Show(true, true)
+	if self.config.type == "CRUD" then
+		for i, model in ipairs(self.config.model) do
+			local btn = Apollo.LoadForm(self.xmlDoc, "BtnCRUD", self.entryList, ContextMenu)
+			btn:FindChild("BtnText"):SetText(tostring(self.config.GetName(model)))
+			btn:SetData({i, model})
 
-	self.value = value
+			btn:FindChild("MoveUp"):Enable(i > 1)
+			btn:FindChild("MoveDown"):Enable(i < #self.config.model)
+		end
 
-	for i, button in ipairs(self.buttons) do
-		local config = button:GetData()
-		if config.IsVisible(value) then
-			button:Show(true, true)
-			button:FindChild("BtnText"):SetText(tostring(config.GetLabel(value)))
-		else
-			button:Show(false, true)
+		local editBox = Apollo.LoadForm(self.xmlDoc, "EditBoxCRUD", self.entryList, ContextMenu)
+		editBox:SetText(self.config.defaultName or "")
+	elseif self.config.type == "dynamic" then
+		self.value = value
+		local buttons = self.config.ShowCallback(value)
+		for i, button in ipairs(buttons) do
+			local btn = Apollo.LoadForm(self.xmlDoc, "BtnRegular", self.entryList, ContextMenu)
+			btn:FindChild("BtnText"):SetText(tostring(button.label))
+			btn:SetData(button)
+		end
+
+		if #buttons <= 0 then
+			self.wndMain:Show(#buttons > 0, true)
 		end
 	end
 
 	local nLeft, nTop, nRight, nBottom = self.wndMain:GetAnchorOffsets()
-	self.wndMain:SetAnchorOffsets(nLeft, nTop, nRight, nTop + self.wndMain:FindChild("ButtonList"):ArrangeChildrenVert(0) + 62)
+	self.wndMain:SetAnchorOffsets(nLeft, nTop, nRight, nTop + self.entryList:ArrangeChildrenVert(0) + 62)
 
-	local tCursor = Apollo.GetMouse()
-	self.wndMain:Move(tCursor.x - knXCursorOffset, tCursor.y - knYCursorOffset, self.wndMain:GetWidth(), self.wndMain:GetHeight())
+	if not alreadyShown then
+		local tCursor = Apollo.GetMouse()
+		self.wndMain:Move(tCursor.x - knXCursorOffset, tCursor.y - knYCursorOffset, self.config.width or self.wndMain:GetWidth(), self.wndMain:GetHeight())
+	end
 end
 
 
+function ContextMenu:OnMainWindowShow(wndHandler)
+	wndHandler:GetData():Show()
+end
+
 function ContextMenu:OnMainWindowClosed(wndHandler, wndControl)
+	self = wndHandler:GetData()
+	if self.config.attachTo then
+		self.config.attachTo:SetCheck(false)
+	end
+	if self.config.HideCallback then
+		self.config.HideCallback(self.value)
+	end
 	wndHandler:Show(false, true)
 end
 
-function ContextMenu:OnRegularBtn(wndHandler, wndControl)
-	self = wndHandler:GetParent():GetParent():GetData()
-	local status, err = pcall(function() wndHandler:GetData().OnClick(self.value) end)
-	if not status then
-		Print(err)
-	end
+
+function ContextMenu:OnRegularBtn(wndHandler, wndControl, eMouseButton)
+	self = wndHandler:GetParent():GetData()
+	local data = wndHandler:GetData()
+
+	data.OnClick(self.value)
+
 	self.wndMain:Close()
+end
+
+function ContextMenu:OnBtnCRUDMouseButtonDown(wndHandler, wndControl, eMouseButton, nLastRelativeMouseX, nLastRelativeMouseY, bDoubleClick)
+	self = wndHandler:GetParent():GetData()
+
+	if bDoubleClick then
+		self = wndHandler:GetParent():GetData()
+		local data = wndHandler:GetData()
+		self.config.OnSelect(data[2])
+
+		self.wndMain:Close()
+	end
+end
+
+function ContextMenu:OnBtnCRUD(wndHandler, wndControl, eMouseButton)
+
+end
+
+function ContextMenu:OnEditBoxReturn(wndHandler, wndControl, text)
+	self = wndHandler:GetParent():GetData()
+	tinsert(self.config.model, self.config.OnCreate(text))
+	self:Show()
+end
+
+function ContextMenu:OnBtnCRUDMoveUp(wndHandler, wndControl)
+	self = wndHandler:GetParent():GetParent():GetData()
+	local data = wndHandler:GetParent():GetData()
+	if data[1] > 1 then
+		self.config.model[data[1]] = self.config.model[data[1] - 1]
+		self.config.model[data[1] - 1] = data[2]
+
+		self:Show()
+	end
+end
+
+function ContextMenu:OnBtnCRUDMoveDown(wndHandler, wndControl)
+	self = wndHandler:GetParent():GetParent():GetData()
+	local data = wndHandler:GetParent():GetData()
+	if data[1] < #self.config.model then
+		self.config.model[data[1]] = self.config.model[data[1] + 1]
+		self.config.model[data[1] + 1] = data[2]
+
+		self:Show()
+	end
+end
+
+function ContextMenu:OnBtnCRUDOverwrite(wndHandler, wndControl)
+	self = wndHandler:GetParent():GetParent():GetData()
+	local data = wndHandler:GetParent():GetData()
+	self.config.model[data[1]] = self.config.OnCreate(self.config.GetName(data[2]))
+	self:Show()
+end
+
+function ContextMenu:OnBtnCRUDDelete(wndHandler, wndControl)
+	self = wndHandler:GetParent():GetParent():GetData()
+	local data = wndHandler:GetParent():GetData()
+	table.remove(self.config.model, data[1])
+	self:Show()
 end
 
 function ContextMenu:OnBtnRegularMouseEnter(wndHandler, wndControl)

@@ -1,11 +1,7 @@
 local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
 
-local max = math.max
-local min = math.min
-local floor = math.floor
+local max, min, floor, tonumber, bit, type, pairs, ipairs, next = math.max, math.min, math.floor, tonumber, bit, type, pairs, ipairs, next
 local round = function(val) return floor(val + .5) end
-local tonumber = tonumber
-local bit = bit
 
 local dummyFrameXmlDoc = XmlDoc.CreateFromTable({__XmlNode = "Forms", [1] = {__XmlNode = "Form", Name = "Form"}})
 
@@ -85,6 +81,34 @@ function Utilities.HSV2RGB(h, s, v)
 	else
 		return v, p, q
 	end
+end
+
+function Utilities.Round(num, digits)
+	local mult = 10^(digits or 0)
+	return floor(num * mult + .5) / mult
+end
+
+local function deepCopy(t)
+	if type(t) == "table" then
+		local copy = {}
+		for k, v in next, t do
+			copy[deepCopy(k)] = deepCopy(v)
+		end
+		return copy
+	else
+		return t
+	end
+end
+Utilities.DeepCopy = deepCopy
+
+function Utilities.Extend(...)
+	local args = {...}
+	for i = 2, #args do
+		for key, value in pairs(args[i]) do
+			args[1][key] = value
+		end
+	end
+	return args[1]
 end
 
 VinceRaidFrames.Utilities = Utilities

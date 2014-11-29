@@ -1,9 +1,3 @@
---local function log(name, value)
---	if SendVarToRover then
---		SendVarToRover(name, value, 0)
---	end
---end
-
 require "Window"
 require "GameLib"
 require "GroupLib"
@@ -59,6 +53,7 @@ function VinceRaidFrames:new(o)
 	o = o or {}
 	setmetatable(o, self)
 
+	o.settings = nil
 	o.onLoadDelayTimer = nil -- Dependencies in RegisterAddon do not *really* work
 	o.timer = nil -- Refresh timer
 	o.readyCheckActive = false -- Different view during ready check
@@ -77,6 +72,7 @@ function VinceRaidFrames:new(o)
 
 	o.defaultSettings = {
 		names = {},
+		presets = {},
 		classColors = {
 			[GameLib.CodeEnumClass.Warrior] = "F54F4F",
 			[GameLib.CodeEnumClass.Engineer] = "EFAB48",
@@ -122,11 +118,6 @@ function VinceRaidFrames:new(o)
 		hideInGroups = false,
 		namingMode = VinceRaidFrames.NamingMode.Shorten
 	}
-	o.settings = setmetatable({
-		names = {},
-		classColors = TableUtil:Copy(o.defaultSettings.classColors)
-	}, {__index = o.defaultSettings})
-
 	return o
 end
 
@@ -139,6 +130,8 @@ function VinceRaidFrames:OnLoad()
 	self.Member:Init(self)
 	self.ContextMenu:Init(self)
 	self.Utilities:Init(self)
+
+	self.settings = self.Utilities.DeepCopy(self.defaultSettings)
 
 	self.Options.parent = self
 	self.Options.settings = self.settings
@@ -182,6 +175,8 @@ function VinceRaidFrames:OnLoad()
 
 	if self:ShouldShow() then
 		self:Show()
+	else
+		self.settings.groups = nil
 	end
 
 	-- ready check
@@ -229,8 +224,9 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames"})
 
 	self.wndGroups = self.wndMain:FindChild("Groups")
+	self.wndButtonList = self.wndMain:FindChild("ButtonList")
 	self.wndGroupBagBtn = self.wndMain:FindChild("GroupBagBtn")
-	self.wndRaidLeaderOptionsBtn = self.wndMain:FindChild("RaidLeaderOptionsBtn")
+	self.wndRaidPresetsBtn = self.wndMain:FindChild("RaidPresetsBtn")
 	self.wndRaidLeaderOptionsBtn = self.wndMain:FindChild("RaidLeaderOptionsBtn")
 	self.wndRaidMasterLootBtn = self.wndMain:FindChild("RaidMasterLootBtn")
 	self.wndRaidLockFrameBtn = self.wndMain:FindChild("RaidLockFrameBtn")
@@ -250,113 +246,130 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
 	self:ShareAddonVersion()
 
+	self.presetsContextMenu = self.ContextMenu:new(self.xmlDoc, {
+		type = "CRUD",
+		model = self.settings.presets,
+		defaultName = "New Preset",
+		width = 265,
+		attachTo = self.wndRaidPresetsBtn,
+
+		GetName = function(model)
+			return model.name
+		end,
+
+		OnSelect = function(model)
+			self.settings.groups = self.Utilities.DeepCopy(model.groups)
+			self:ShareGroupLayout()
+			self:ArrangeMembers()
+		end,
+
+		OnRename = function(model, name)
+			model.name = name
+		end,
+
+		OnCreate = function(name)
+			return {
+				name = name,
+				groups = self.Utilities.DeepCopy(self.settings.groups)
+			}
+		end
+	})
+
 	self.groupContextMenu = self.ContextMenu:new(self.xmlDoc, {
-		{
-			GetLabel = function ()
-				return "Move Up"
-			end,
-			IsVisible = function (value)
-				return value > 1 and value <= #self.settings.groups
-			end,
-			OnClick = function (value)
-				if value <= 1 or value > #self.settings.groups then
-					return
+		type = "dynamic",
+		ShowCallback = function(value)
+			local buttons = {}
+
+			if value > 1 and value <= #self.settings.groups then
+				tinsert(buttons, {
+					label = "Move Up",
+					OnClick = function (value)
+						if value <= 1 or value > #self.settings.groups then
+							return
+						end
+
+						local tmp = self.settings.groups[value]
+						self.settings.groups[value] = self.settings.groups[value - 1]
+						self.settings.groups[value - 1] = tmp
+
+						self:ShareGroupLayout()
+						self:ArrangeMembers()
+					end
+				})
+			end
+			if value < #self.settings.groups and value >= 1 then
+				tinsert(buttons, {
+					label = "Move Down",
+					OnClick = function (value)
+						if value < 1 or value >= #self.settings.groups then
+							return
+						end
+
+						local tmp = self.settings.groups[value]
+						self.settings.groups[value] = self.settings.groups[value + 1]
+						self.settings.groups[value + 1] = tmp
+
+						self:ShareGroupLayout()
+						self:ArrangeMembers()
+					end
+				})
+			end
+			tinsert(buttons, {
+				label = "New Group",
+				OnClick = function (value)
+					local group = {
+						name = self:GetUniqueGroupName(),
+						members = {}
+					}
+					tinsert(self.settings.groups, value, group)
+
+					self:ArrangeMembers()
+
+					local frame = self.groupFrames[group.name].frame
+					local editBox = frame:FindChild("NameEditBox")
+					frame:FindChild("Name"):Show(false, true)
+					editBox:Show(true, true)
+					editBox:SetFocus(true, true)
+					editBox:SetText(group.name)
+					editBox:SetData(group)
 				end
+			})
+			if #self.settings.groups > 1 then
+				tinsert(buttons, {
+					label = "Remove",
+					OnClick = function (value)
+						if #self.settings.groups <= 1 then
+							return
+						end
 
-				local tmp = self.settings.groups[value]
-				self.settings.groups[value] = self.settings.groups[value - 1]
-				self.settings.groups[value - 1] = tmp
+						local index = value == #self.settings.groups and value - 1 or #self.settings.groups
+						local newGroup = self.settings.groups[index].members
+						for i, name in ipairs(self.settings.groups[value].members) do
+							tinsert(newGroup, name)
+						end
+						table.remove(self.settings.groups, value)
 
-				self:ShareGroupLayout()
-				self:ArrangeMembers()
+						self:ShareGroupLayout()
+						self:ArrangeMembers()
+					end
+				})
 			end
-		},
-		{
-			GetLabel = function ()
-				return "Move Down"
-			end,
-			IsVisible = function (value)
-				return value < #self.settings.groups and value >= 1
-			end,
-			OnClick = function (value)
-				if value < 1 or value >= #self.settings.groups then
-					return
+			tinsert(buttons, {
+				label = "Rename",
+				OnClick = function (value)
+					local group = self.settings.groups[value]
+					local frame = self.groupFrames[group.name].frame
+					local editBox = frame:FindChild("NameEditBox")
+					frame:FindChild("Name"):Show(false, true)
+					editBox:Show(true, true)
+					editBox:SetFocus(true, true)
+					editBox:SetText(group.name)
+					editBox:SetData(group)
 				end
+			})
 
-				local tmp = self.settings.groups[value]
-				self.settings.groups[value] = self.settings.groups[value + 1]
-				self.settings.groups[value + 1] = tmp
-
-				self:ShareGroupLayout()
-				self:ArrangeMembers()
-			end
-		},
-		{
-			GetLabel = function ()
-				return "New Group"
-			end,
-			IsVisible = function ()
-				return true
-			end,
-			OnClick = function (value)
-				local group = {
-					name = self:GetUniqueGroupName(),
-					members = {}
-				}
-				tinsert(self.settings.groups, value, group)
-
-				self:ArrangeMembers()
-
-				local frame = self.groupFrames[group.name].frame
-				local editBox = frame:FindChild("NameEditBox")
-				frame:FindChild("Name"):Show(false, true)
-				editBox:Show(true, true)
-				editBox:SetFocus(true, true)
-				editBox:SetText(group.name)
-				editBox:SetData(group)
-			end
-		},
-		{
-			GetLabel = function ()
-				return "Remove"
-			end,
-			IsVisible = function ()
-				return #self.settings.groups > 1
-			end,
-			OnClick = function (value)
-				if #self.settings.groups <= 1 then
-					return
-				end
-
-				local index = value == #self.settings.groups and value - 1 or #self.settings.groups
-				local newGroup = self.settings.groups[index].members
-				for i, name in ipairs(self.settings.groups[value].members) do
-					tinsert(newGroup, name)
-				end
-				table.remove(self.settings.groups, value)
-
-				self:ShareGroupLayout()
-				self:ArrangeMembers()
-			end
-		},
-		{
-			GetLabel = function ()
-				return "Rename"
-			end,
-			IsVisible = function ()
-				return true
-			end,
-			OnClick = function (value)
-				local group = self.settings.groups[value]
-				local frame = self.groupFrames[group.name].frame
-				local editBox = frame:FindChild("NameEditBox")
-				frame:FindChild("Name"):Show(false, true)
-				editBox:Show(true, true)
-				editBox:SetFocus(true, true)
-				editBox:SetText(group.name)
-				editBox:SetData(group)
-			end
-		}
+			return buttons
+		end
 	})
 
 	self:SetLocked(self.settings.locked)
@@ -466,11 +479,18 @@ function VinceRaidFrames:OnRefresh()
 		end
 	end
 
+	self:UpdateGroupButtons()
+	self:RefreshAggroIndicators()
+end
+
+function VinceRaidFrames:UpdateGroupButtons()
 	local isLeader = GroupLib.AmILeader()
 	self.wndRaidLeaderOptionsBtn:Show(GroupLib.InRaid() and isLeader)
 	self.wndRaidMasterLootBtn:Show(isLeader)
+	self.wndRaidPresetsBtn:Show(isLeader)
 
-	self:RefreshAggroIndicators()
+	local left, top, right, bottom = self.wndButtonList:GetAnchorOffsets()
+	self.wndButtonList:SetAnchorOffsets(-self.wndButtonList:ArrangeChildrenHorz(), top, 0, bottom)
 end
 
 function VinceRaidFrames:RefreshAggroIndicators()
@@ -1186,16 +1206,7 @@ function VinceRaidFrames:OnRestore(eType, tSavedData)
 		return
 	end
 
-	-- Explicitly set keys in settings
-	for key, value in pairs(self.defaultSettings) do
-		if type(value) == "table" then
-			if not tSavedData[key] then
-				tSavedData[key] = TableUtil:Copy(self.defaultSettings[key])
-			end
-		end
-	end
-
-	self.settings = setmetatable(tSavedData, {__index = self.defaultSettings})
+	self.settings = self.Utilities.Extend(self.Utilities.DeepCopy(self.defaultSettings), tSavedData)
 end
 
 

@@ -1,6 +1,8 @@
 local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
 local Utilities = VinceRaidFrames.Utilities
 
+local round = Utilities.Round
+
 local floor = math.floor
 local tostring = tostring
 local tonumber = tonumber
@@ -222,11 +224,6 @@ function Options:OnClose(wndHandler)
 	self:Hide()
 end
 
-function Options.round(num, digits)
-	local mult = 10^(digits or 0)
-	return floor(num * mult + .5) / mult
-end
-
 
 
 function Options:OnBottomLeftTextMouseButtonUp()
@@ -385,7 +382,7 @@ function Options:UpdateSliderWidget(wndHandler, value)
 			return nil
 		end
 	else
-		value = self.round(value, wndHandler:GetParent():GetData().digits)
+		value = round(value, wndHandler:GetParent():GetData().digits)
 		parent:FindChild("Input"):SetText(tostring(value))
 	end
 	parent:FindChild("Slider"):SetValue(value)
