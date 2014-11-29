@@ -32,7 +32,21 @@ function ContextMenu:Init(parent)
 end
 
 function ContextMenu:Show(value)
-	local alreadyShown = self.wndMain:IsShown()
+	self.value = value
+	if not self.wndMain:IsShown() then
+		self.wndMain:Show(true, true)
+	end
+end
+
+function ContextMenu:OnMainWindowShow(wndHandler)
+	self = wndHandler:GetData()
+	self:Refresh()
+
+	local tCursor = Apollo.GetMouse()
+	self.wndMain:Move(tCursor.x - knXCursorOffset, tCursor.y - knYCursorOffset, self.config.width or self.wndMain:GetWidth(), self.wndMain:GetHeight())
+end
+
+function ContextMenu:Refresh()
 	self.entryList:DestroyChildren()
 
 	if self.config.type == "CRUD" then
@@ -48,32 +62,22 @@ function ContextMenu:Show(value)
 		local editBox = Apollo.LoadForm(self.xmlDoc, "EditBoxCRUD", self.entryList, ContextMenu)
 		editBox:SetText(self.config.defaultName or "")
 	elseif self.config.type == "dynamic" then
-		self.value = value
-		local buttons = self.config.ShowCallback(value)
+		local buttons = self.config.ShowCallback(self.value)
 		for i, button in ipairs(buttons) do
 			local btn = Apollo.LoadForm(self.xmlDoc, "BtnRegular", self.entryList, ContextMenu)
 			btn:FindChild("BtnText"):SetText(tostring(button.label))
 			btn:SetData(button)
 		end
 
-		if #buttons <= 0 then
-			self.wndMain:Show(#buttons > 0, true)
+		if not self.wndMain:IsShown() and #buttons > 0 then
+			self.wndMain:Show(true, true)
 		end
 	end
 
 	local nLeft, nTop, nRight, nBottom = self.wndMain:GetAnchorOffsets()
 	self.wndMain:SetAnchorOffsets(nLeft, nTop, nRight, nTop + self.entryList:ArrangeChildrenVert(0) + 62)
-
-	if not alreadyShown then
-		local tCursor = Apollo.GetMouse()
-		self.wndMain:Move(tCursor.x - knXCursorOffset, tCursor.y - knYCursorOffset, self.config.width or self.wndMain:GetWidth(), self.wndMain:GetHeight())
-	end
 end
 
-
-function ContextMenu:OnMainWindowShow(wndHandler)
-	wndHandler:GetData():Show()
-end
 
 function ContextMenu:OnMainWindowClosed(wndHandler, wndControl)
 	self = wndHandler:GetData()
@@ -115,7 +119,7 @@ end
 function ContextMenu:OnEditBoxReturn(wndHandler, wndControl, text)
 	self = wndHandler:GetParent():GetData()
 	tinsert(self.config.model, self.config.OnCreate(text))
-	self:Show()
+	self:Refresh()
 end
 
 function ContextMenu:OnBtnCRUDMoveUp(wndHandler, wndControl)
@@ -125,7 +129,7 @@ function ContextMenu:OnBtnCRUDMoveUp(wndHandler, wndControl)
 		self.config.model[data[1]] = self.config.model[data[1] - 1]
 		self.config.model[data[1] - 1] = data[2]
 
-		self:Show()
+		self:Refresh()
 	end
 end
 
@@ -136,7 +140,7 @@ function ContextMenu:OnBtnCRUDMoveDown(wndHandler, wndControl)
 		self.config.model[data[1]] = self.config.model[data[1] + 1]
 		self.config.model[data[1] + 1] = data[2]
 
-		self:Show()
+		self:Refresh()
 	end
 end
 
@@ -144,14 +148,14 @@ function ContextMenu:OnBtnCRUDOverwrite(wndHandler, wndControl)
 	self = wndHandler:GetParent():GetParent():GetData()
 	local data = wndHandler:GetParent():GetData()
 	self.config.model[data[1]] = self.config.OnCreate(self.config.GetName(data[2]))
-	self:Show()
+	self:Refresh()
 end
 
 function ContextMenu:OnBtnCRUDDelete(wndHandler, wndControl)
 	self = wndHandler:GetParent():GetParent():GetData()
 	local data = wndHandler:GetParent():GetData()
 	table.remove(self.config.model, data[1])
-	self:Show()
+	self:Refresh()
 end
 
 function ContextMenu:OnBtnRegularMouseEnter(wndHandler, wndControl)
