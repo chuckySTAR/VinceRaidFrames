@@ -110,6 +110,7 @@ function Options:OnCategorySelect(wndHandler)
 			self.refreshIntervalSliderWidget = self:InitSliderWidget(options:FindChild("RefreshInterval"), self.refreshIntervalMin, self.refreshIntervalMax, self.refreshIntervalTick, self.parent.settings.refreshInterval, 2, function (value)
 				self.parent.settings.refreshInterval = value
 				self.parent.timer:Set(value)
+				self.parent.timer:Stop()
 			end)
 			self.memberColumnsSliderWidget = self:InitSliderWidget(options:FindChild("Columns"), self.memberColumnsMin, self.memberColumnsMax, self.memberColumnsTick, self.parent.settings.memberColumns, 0, function (value)
 				self.parent.settings.memberColumns = value

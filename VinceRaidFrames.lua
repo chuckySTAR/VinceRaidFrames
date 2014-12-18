@@ -1,8 +1,3 @@
-require "Window"
-require "GameLib"
-require "GroupLib"
-require "ICCommLib"
-
 local VinceRaidFrames = {}
 
 local pairs = pairs
@@ -129,7 +124,7 @@ function VinceRaidFrames:OnLoad()
 	self.Options:Init(self)
 	self.Member:Init(self)
 	self.ContextMenu:Init(self)
-	self.Utilities:Init(self)
+	self.Utilities.Init(self)
 
 	self.settings = self.Utilities.DeepCopy(self.defaultSettings)
 
@@ -175,8 +170,6 @@ function VinceRaidFrames:OnLoad()
 
 	if self:ShouldShow() then
 		self:Show()
-	else
-		self.settings.groups = nil
 	end
 
 	-- ready check
@@ -201,7 +194,7 @@ function VinceRaidFrames:SetRaidView()
 end
 
 function VinceRaidFrames:ShouldShow()
-	return GroupLib.InRaid() or GroupLib.InGroup() and not self.settings.hideInGroups
+	return GroupLib.InRaid() or (GroupLib.InGroup() and not self.settings.hideInGroups)
 end
 
 function VinceRaidFrames:Show()
@@ -1158,7 +1151,13 @@ function VinceRaidFrames:OnGroup_MemberOrderChanged()
 end
 
 function VinceRaidFrames:OnGroup_Add(name) -- someone joins
-	tinsert(self.settings.groups[#self.settings.groups].members, name)
+	-- Group_Add sometimes triggers before Group_Join?!?! idk better initialize self.settings.groups
+	if not self.settings.groups then
+		self:CreateDefaultGroups()
+	else
+		tinsert(self.settings.groups[#self.settings.groups].members, name)
+	end
+
 	self:BuildMembers()
 end
 
@@ -1168,6 +1167,9 @@ function VinceRaidFrames:OnGroup_Remove(name) -- someone leaves
 end
 
 function VinceRaidFrames:OnGroup_Join() -- player joins
+	if not GroupLib.AmILeader() then
+		self.settings.groups = nil
+	end
 	self:Show()
 end
 
