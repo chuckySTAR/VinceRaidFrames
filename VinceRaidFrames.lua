@@ -252,8 +252,8 @@ function VinceRaidFrames:OnDocLoaded_Main()
 
 		OnSelect = function(model)
 			self.settings.groups = self.Utilities.DeepCopy(model.groups)
-			self:ShareGroupLayout()
 			self:ArrangeMembers()
+			self:ShareGroupLayout()
 		end,
 
 		OnRename = function(model, name)
