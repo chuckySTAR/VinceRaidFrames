@@ -168,6 +168,16 @@ function VinceRaidFrames:OnLoad()
 	self.timer = ApolloTimer.Create(self.settings.refreshInterval, true, "OnRefresh", self)
 	self.timer:Stop()
 
+	local groupFrame = Apollo.GetAddon("GroupFrame")
+	if groupFrame then
+		local hook = groupFrame.OnGroupMemberFlags
+		groupFrame.OnGroupMemberFlags = function(groupDisplay, nMemberIndex, bIsFromPromotion, tChangedFlags)
+			tChangedFlags.bReady = false
+			hook(groupDisplay, nMemberIndex, bIsFromPromotion, tChangedFlags)
+		end
+	end
+
+
 	if self:ShouldShow() then
 		self:Show()
 	end
