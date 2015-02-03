@@ -527,7 +527,11 @@ function Member:OnMemberClick(wndHandler, wndControl, eMouseButton)
 		GameLib.SetTargetUnit(self.unit)
 	end
 	if eMouseButton == GameLib.CodeEnumInputMouse.Right then
-		Event_FireGenericEvent("GenericEvent_NewContextMenuPlayerDetailed", self.frame, self.name, self.unit)
+		if self.unit and self.unit:IsValid() then
+			Event_FireGenericEvent("GenericEvent_NewContextMenuPlayerDetailed", self.frame, self.name, self.unit)
+		else
+			Event_FireGenericEvent("GenericEvent_NewContextMenuPlayer", self.frame, self.name)
+		end
 	end
 end
 
