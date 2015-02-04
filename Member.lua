@@ -2,6 +2,7 @@ local VinceRaidFrames = Apollo.GetAddon("VinceRaidFrames")
 local Utilities = VinceRaidFrames.Utilities
 
 local WindowLocationNew = WindowLocation.new
+local SpellCodeEnumSpellClassDebuffDispellable = Spell.CodeEnumSpellClass.DebuffDispellable
 
 local setmetatable = setmetatable
 local ipairs = ipairs
@@ -66,7 +67,6 @@ function Member:new(unit, groupMember, parent)
 		name = groupMember and groupMember.strCharacterName or unit:GetName(),
 		groupMember = groupMember,
 		version = nil, -- updated on iccomm messages
-		readyCheckMode = false,
 		frame = nil,
 		draggable = false,
 		parent = parent,
@@ -83,7 +83,7 @@ function Member:new(unit, groupMember, parent)
 		health = nil,
 		flash = nil,
 		text = nil,
-		timer = nil,
+		timer = nil, -- for interrupts
 		outOfRange = false,
 		dead = false,
 		online = true,
@@ -125,9 +125,8 @@ function Member:Build(parent)
 	self.frame:SetData(self)
 	self.container:SetData(self)
 	self.flash:Show(false, true)
-	--	o:SetReadyCheckMode()
-	self:UnsetReadyCheckMode()
-	self:Refresh(false, self.unit, self.groupMember)
+	self:UpdateReadyCheckMode()
+	self:Refresh(self.unit, self.groupMember)
 
 	-- Bug: SetTarget() isn't updated on reloadui
 end
@@ -189,8 +188,6 @@ function Member:Arrange()
 			self.frame:FindChild("Absorption"):SetAnchorOffsets(-1 - self.settings.memberAbsorbWidth, 1, -1, -1)
 		else
 			self.frame:FindChild("Absorption"):Show(false, true)
-
-
 		end
 	end
 end
@@ -235,17 +232,16 @@ function Member:ShowClassIcon(show)
 end
 
 function Member:UpdateColorBy(color)
-	if color == VinceRaidFrames.ColorBy.Class and not self.readyCheckMode then
+	if color == VinceRaidFrames.ColorBy.Class and not self.parent.readyCheckActive then
 		self:SetHealthColor(self.classColor)
 	elseif color == VinceRaidFrames.ColorBy.Health then
-		self:Refresh(self.readyCheckMode, nil, self.groupMember)
+		self:Refresh(nil, self.groupMember)
 	end
 end
 
 
-function Member:Refresh(readyCheckMode, unit, groupMember)
+function Member:Refresh(unit, groupMember)
 	self.groupMember = groupMember
-	self.readyCheckMode = readyCheckMode
 	self.unit = unit and unit or self.unit
 
 	local health
@@ -286,7 +282,7 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 	self:RefreshNameColor()
 	self:RefreshTargetMarker(unit)
 
-	if not readyCheckMode and self.settings.colorBy == VinceRaidFrames.ColorBy.Health then
+	if not self.parent.readyCheckActive and self.settings.colorBy == VinceRaidFrames.ColorBy.Health then
 		self:SetHealthColor(Utilities.GetColorBetween(self.lowHealthColor, self.highHealthColor, health))
 	end
 
@@ -311,12 +307,13 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 		self.health:SetAnchorPoints(1 - health, 0, 1, 1)
 		self.shield:SetAnchorPoints(0, 0, 1 - shield, 1)
 		self.absorb:SetAnchorPoints(0, 0, 1 - absorb, 1)
-	end
-	
-	if readyCheckMode then
-		self:RefreshBuffIcons()
-		if groupMember and groupMember.bHasSetReady then
-			if not groupMember.bReady then
+    end
+
+	self:RefreshBuffs()
+
+	if self.parent.readyCheckActive then
+		if self.groupMember and self.groupMember.bHasSetReady then
+			if not self.groupMember.bReady then
 				self:SetHealthColor("ff0000")
 			elseif not self.potionPixie or not self.foodPixie then
 				self:SetHealthColor("ffff00")
@@ -324,8 +321,18 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 				self:SetHealthColor("00ff00")
 			end
 		end
-	elseif self.settings.memberBuffIconsOutOfFight then
-		self:RefreshBuffIcons()
+	end
+end
+
+function Member:RefreshBuffs()
+	if self.unit then
+		local buffs = self.unit:GetBuffs()
+		if buffs then
+			if self.parent.readyCheckActive or (self.settings.memberBuffIconsOutOfFight and self.parent.inCombat) then
+				self:RefreshBuffIcons(buffs)
+			end
+			self:RefreshCleanseIndicator(buffs)
+		end
 	end
 end
 
@@ -355,34 +362,44 @@ function Member:RefreshTargetMarker(unit)
 	end
 end
 
-function Member:RefreshBuffIcons()
-	if self.unit then
-		local potionFound = false
-		local foodFound = false
-		local buffs = self.unit:GetBuffs()
-		if buffs then
-			for key, buff in ipairs(buffs.arBeneficial) do
-				local potionSprite = Potions[buff.splEffect:GetId()]
-				local foodSprite = buff.splEffect:GetName() == FoodBuffName and "IconSprites:Icon_ItemMisc_UI_Item_Sammich"
-				if potionSprite then
-					potionFound = true
-					self:AddPotion(potionSprite)
-				end
-				if foodSprite then
-					foodFound = true
-					self:AddFood(foodSprite)
-				end
-				if potionFound and foodFound then
-					break
-				end
-			end
+function Member:RefreshCleanseIndicator(buffs)
+	local canCleanse = false
+	for i, buff in ipairs(buffs.arHarmful) do
+		if buff.splEffect:GetClass() == SpellCodeEnumSpellClassDebuffDispellable then
+			canCleanse = true
+			break
 		end
-		if not potionFound then
-			self:RemovePotion()
+	end
+	if canCleanse then
+		self.container:SetBGColor("ffff0000")
+	else
+		self.container:SetBGColor("ff111111")
+	end
+end
+
+function Member:RefreshBuffIcons(buffs)
+	local potionFound = false
+	local foodFound = false
+	for key, buff in ipairs(buffs.arBeneficial) do
+		local potionSprite = Potions[buff.splEffect:GetId()]
+		local foodSprite = buff.splEffect:GetName() == FoodBuffName and "IconSprites:Icon_ItemMisc_UI_Item_Sammich"
+		if potionSprite then
+			potionFound = true
+			self:AddPotion(potionSprite)
 		end
-		if not foodFound then
-			self:RemoveFood()
+		if foodSprite then
+			foodFound = true
+			self:AddFood(foodSprite)
 		end
+		if potionFound and foodFound then
+			break
+		end
+	end
+	if not potionFound then
+		self:RemovePotion()
+	end
+	if not foodFound then
+		self:RemoveFood()
 	end
 end
 
@@ -402,15 +419,22 @@ function Member:SetNameColor(color)
     self.text:SetTextColor(color)
 end
 
-function Member:SetReadyCheckMode()
-	self:SetHealthColor("cccccc")
+function Member:UpdateReadyCheckMode()
+	if self.parent.readyCheckActive then
+		self:SetHealthColor("cccccc")
+	else
+		self:UpdateColorBy(self.settings.colorBy)
+
+		if self.settings.memberBuffIconsOutOfFight and not self.parent.inCombat then
+			self:RemoveBuffIcons()
+		end
+	end
 end
 
-function Member:UnsetReadyCheckMode()
-	self.readyCheckMode = false
-	self:UpdateColorBy(self.settings.colorBy)
-	
-	self:RemoveBuffIcons()
+function Member:UpdateCombatMode()
+	if self.parent.inCombat then
+		self:RemoveBuffIcons()
+	end
 end
 
 function Member:RemoveBuffIcons()

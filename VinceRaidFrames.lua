@@ -75,6 +75,7 @@ function VinceRaidFrames:new(o)
 	o.leader = ""
 	o.editMode = false -- dragndrop of members
 	o.addonVersionAnnounceTimer = nil
+	o.inCombat = false
 
 	-- files overwrite these
 	self.Options = nil
@@ -178,6 +179,7 @@ function VinceRaidFrames:OnLoad()
 	ApolloRegisterEventHandler("UnitEnteredCombat", "OnUnitEnteredCombat", self)
 	ApolloRegisterEventHandler("UnitCreated", "OnUnitCreated", self)
 	ApolloRegisterEventHandler("UnitDestroyed", "OnUnitDestroyed", self)
+	ApolloRegisterEventHandler("CharacterCreated", "OnCharacterCreated", self)
 
 	ApolloRegisterEventHandler("CombatLogCCState", "OnCombatLogCCState", self)
 	ApolloRegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
@@ -198,6 +200,10 @@ function VinceRaidFrames:OnLoad()
 		end
 	end
 
+	local playerUnit = GameLibGetPlayerUnit()
+	if playerUnit then
+		self.inCombat = playerUnit:IsInCombat()
+	end
 
 	if self:ShouldShow() then
 		self:Show()
@@ -267,6 +273,8 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	self.wndRaidLockFrameBtn:SetCheck(self.settings.locked)
 
 	self.wndMain:SetBGColor(("%02x000000"):format(self.settings.backgroundAlpha * 255))
+
+	ApolloRegisterEventHandler("ICCommReceiveThrottled", "OnICCommReceiveThrottled", self)
 
 	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
 	self:ShareAddonVersion()
@@ -469,14 +477,14 @@ function VinceRaidFrames:OnGroup_ReadyCheck(index, message)
 
 	self.readyCheckActive = true
 	for name, member in pairs(self.members) do
-		member:SetReadyCheckMode()
+		member:UpdateReadyCheckMode()
 	end
 end
 
 function VinceRaidFrames:OnVRF_ReadyCheckTimeout()
 	self.readyCheckActive = false
 	for name, member in pairs(self.members) do
-		member:UnsetReadyCheckMode()
+		member:UpdateReadyCheckMode()
 	end
 end
 
@@ -501,7 +509,7 @@ function VinceRaidFrames:OnRefresh()
 		local groupMember = GroupLibGetGroupMember(i)
 		local member = self.members[groupMember and groupMember.strCharacterName or (unit and unit:GetName())]
 		if member then
-			member:Refresh(self.readyCheckActive, unit, groupMember)
+			member:Refresh(unit, groupMember)
 		end
 		if groupMember and groupMember.bIsLeader then
 			-- leader changed?
@@ -924,6 +932,12 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
 	end
 end
 
+function VinceRaidFrames:OnICCommReceiveThrottled(...)
+	if debug then
+		SendVarToRover("iccommthrottle", {...}, 0)
+	end
+end
+
 function VinceRaidFrames:OnGroupToggle()
 	self:ArrangeMembers()
 end
@@ -1133,6 +1147,10 @@ function VinceRaidFrames:IsUnitMob(unit)
 	return unit ~= nil and unit:GetType() == "NonPlayer" and unit:GetDispositionTo(GameLibGetPlayerUnit()) ~= UnitCodeEnumDispositionFriendly
 end
 
+function VinceRaidFrames:OnCharacterCreated()
+	self.inCombat = GameLibGetPlayerUnit():IsInCombat()
+end
+
 function VinceRaidFrames:OnUnitCreated(unit)
 	if self:IsUnitMob(unit) and unit:IsInCombat() and unit:GetTarget() then
 		self.mobsInCombat[unit:GetId()] = unit
@@ -1146,9 +1164,11 @@ function VinceRaidFrames:OnUnitDestroyed(unit)
 end
 function VinceRaidFrames:OnUnitEnteredCombat(unit, bInCombat)
 	if self.wndMain and unit:IsThePlayer() then
+		self.inCombat = bInCombat
 		self.readyCheckActive = false
 		for name, member in pairs(self.members) do
-			member:UnsetReadyCheckMode()
+			member:UpdateReadyCheckMode()
+			member:UpdateCombatMode()
 		end
 	end
 
