@@ -165,7 +165,7 @@ function Member:Arrange()
 		if self.settings.memberShowAbsorbBar then
 			self.frame:FindChild("Absorption"):Show(true, true)
 			self.frame:FindChild("Absorption"):SetAnchorPoints(0, 1, 1, 1)
-			self.frame:FindChild("Absorption"):SetAnchorOffsets(1, -1 - self.settings.memberAbsorbHeight - self.settings.memberShieldHeight, -1, -1 - self.settings.memberShieldHeight)
+			self.frame:FindChild("Absorption"):SetAnchorOffsets(1, -1 - self.settings.memberAbsorbHeight - shieldHeight, -1, -1 - shieldHeight)
 		else
 			self.frame:FindChild("Absorption"):Show(false, true)
 		end
@@ -178,7 +178,7 @@ function Member:Arrange()
 		if self.settings.memberShowShieldBar then
 			self.frame:FindChild("Shield"):Show(true, true)
 			self.frame:FindChild("Shield"):SetAnchorPoints(1, 0, 1, 1)
-			self.frame:FindChild("Shield"):SetAnchorOffsets(-1 - self.settings.memberShieldWidth - self.settings.memberAbsorbWidth, 1, -1 - self.settings.memberAbsorbWidth, -1)
+			self.frame:FindChild("Shield"):SetAnchorOffsets(-1 - self.settings.memberShieldWidth - absorbWidth, 1, -1 - absorbWidth, -1)
 		else
 			self.frame:FindChild("Shield"):Show(false, true)
 		end
@@ -189,6 +189,8 @@ function Member:Arrange()
 			self.frame:FindChild("Absorption"):SetAnchorOffsets(-1 - self.settings.memberAbsorbWidth, 1, -1, -1)
 		else
 			self.frame:FindChild("Absorption"):Show(false, true)
+
+
 		end
 	end
 end
@@ -408,6 +410,10 @@ function Member:UnsetReadyCheckMode()
 	self.readyCheckMode = false
 	self:UpdateColorBy(self.settings.colorBy)
 	
+	self:RemoveBuffIcons()
+end
+
+function Member:RemoveBuffIcons()
 	self:RemovePotion()
 	self:RemoveFood()
 end

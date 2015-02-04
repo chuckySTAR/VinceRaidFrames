@@ -110,6 +110,7 @@ function VinceRaidFrames:new(o)
 		padding = 5,
 		groups = nil,
 		refreshInterval = .3,
+		backgroundAlpha = .2,
 		interruptFlashDuration = 2.5,
 		readyCheckTimeout = 60,
 		locked = false,
@@ -248,6 +249,7 @@ function VinceRaidFrames:OnDocLoaded_Main()
 
 	self.wndRaidLockFrameBtn:SetCheck(self.settings.locked)
 
+	self.wndMain:SetBGColor(("%02x000000"):format(self.settings.backgroundAlpha * 255))
 
 	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
 	self:ShareAddonVersion()
@@ -930,6 +932,12 @@ end
 function VinceRaidFrames:ArrangeMemberFrames()
 	for name, member in pairs(self.members) do
 		member:Arrange()
+	end
+end
+
+function VinceRaidFrames:RemoveBuffIcons()
+	for name, member in pairs(self.members) do
+		member:RemoveBuffIcons()
 	end
 end
 

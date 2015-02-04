@@ -46,6 +46,10 @@ function Options:Init(parent)
 	self.memberColumnsMax = 10
 	self.memberColumnsTick = 1
 
+	self.backgroundAlphaMin = 0
+	self.backgroundAlphaMax = 1
+	self.backgroundAlphaTick = .1
+
 	self.memberHeightMin = 5
 	self.memberHeightMax = 100
 	self.memberHeightTick = 1
@@ -116,6 +120,10 @@ function Options:OnCategorySelect(wndHandler)
 				self.parent.settings.memberColumns = value
 				self.parent:ArrangeMembers()
 			end)
+			self.backgroundAlphaSliderWidget = self:InitSliderWidget(options:FindChild("BackgroundAlpha"), self.backgroundAlphaMin, self.backgroundAlphaMax, self.backgroundAlphaTick, self.parent.settings.backgroundAlpha, 2, function (value)
+				self.parent.settings.backgroundAlpha = value
+				self.parent.wndMain:SetBGColor(("%02x000000"):format(value * 255))
+			end)
 			options:FindChild("HideInGroups"):SetCheck(self.parent.settings.hideInGroups)
 
 			options:FindChild("SortByClass"):SetData(1)
@@ -129,6 +137,8 @@ function Options:OnCategorySelect(wndHandler)
 			options:FindChild(ColorIdToName[self.parent.settings.colorBy]):SetCheck(true)
 
 			options:FindChild("BuffIconsOutOfFight"):SetCheck(self.parent.settings.memberBuffIconsOutOfFight)
+			options:FindChild("ShowShieldBar"):SetCheck(self.parent.settings.memberShowShieldBar)
+			options:FindChild("ShowAbsorbBar"):SetCheck(self.parent.settings.memberShowAbsorbBar)
 			options:FindChild("ShieldsBelowHealth"):SetCheck(self.parent.settings.memberShieldsBelowHealth)
 			options:FindChild("ClassIcon"):SetCheck(self.parent.settings.memberShowClassIcon)
 			options:FindChild("TargetOnHover"):SetCheck(self.parent.settings.targetOnHover)
@@ -287,6 +297,10 @@ end
 
 function Options:OnBuffIconsOutOfFight(wndHandler, wndControl)
 	self.parent.settings.memberBuffIconsOutOfFight = wndControl:IsChecked()
+
+	if not self.parent.settings.memberBuffIconsOutOfFight then
+		self.parent:RemoveBuffIcons()
+	end
 end
 
 function Options:OnShowClassIcon(wndHandler, wndControl)
