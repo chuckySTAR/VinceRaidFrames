@@ -43,6 +43,23 @@ local WrongInterruptBaseSpellIds = {
 
 
 
+local debug = true
+
+local function log(str)
+	if debug then
+		if not VRFDebug then
+			_G.VRFDebug = {}
+		end
+		tinsert(VRFDebug, str)
+		Print(tostring(str))
+		if SendVarToRover then
+			SendVarToRover("VRF Log", str, 0)
+		end
+	end
+end
+
+
+
 VinceRaidFrames.__index = VinceRaidFrames
 function VinceRaidFrames:new(o)
 	o = o or {}
@@ -425,11 +442,23 @@ function VinceRaidFrames:ShareAddonVersion()
 end
 
 function VinceRaidFrames:OnShareAddonVersionTimer()
-	if self.channel then
-		self.channel:SendMessage({version = self.Utilities.GetAddonVersion()})
+	if self.channel and self.leader then
+		self.channel:SendPrivateMessage(self.leader, {version = self.Utilities.GetAddonVersion()})
+		log("Sending version to " .. self.leader)
 	end
 end
 
+function VinceRaidFrames:GetAllMemberNames()
+	local names = {}
+	if self.settings.groups then
+		for i, group in ipairs(self.settings.groups) do
+			for j, name in ipairs(group.members) do
+				tinsert(names, name)
+			end
+		end
+	end
+	return names
+end
 
 function VinceRaidFrames:OnGroup_ReadyCheck(index, message)
 	Apollo.AlertAppWindow()
@@ -839,7 +868,10 @@ function VinceRaidFrames:IsLeader(name)
 end
 
 function VinceRaidFrames:ShareGroupLayout()
-	self.channel:SendMessage(self.settings.groups)
+	local names = self:GetAllMemberNames()
+	if #names > 0 then
+		self.channel:SendPrivateMessage(names, self.settings.groups)
+	end
 end
 
 function VinceRaidFrames:IsUniqueGroupName(name)
