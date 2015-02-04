@@ -128,6 +128,7 @@ function Options:OnCategorySelect(wndHandler)
 			options:FindChild("ColorByHealth"):SetData(VinceRaidFrames.ColorBy.Health)
 			options:FindChild(ColorIdToName[self.parent.settings.colorBy]):SetCheck(true)
 
+			options:FindChild("BuffIconsOutOfFight"):SetCheck(self.parent.settings.memberBuffIconsOutOfFight)
 			options:FindChild("ShieldsBelowHealth"):SetCheck(self.parent.settings.memberShieldsBelowHealth)
 			options:FindChild("ClassIcon"):SetCheck(self.parent.settings.memberShowClassIcon)
 			options:FindChild("TargetOnHover"):SetCheck(self.parent.settings.targetOnHover)
@@ -284,6 +285,10 @@ function Options:OnHintArrowOnHover(wndHandler, wndControl)
 	self.parent.settings.hintArrowOnHover = wndControl:IsChecked()
 end
 
+function Options:OnBuffIconsOutOfFight(wndHandler, wndControl)
+	self.parent.settings.memberBuffIconsOutOfFight = wndControl:IsChecked()
+end
+
 function Options:OnShowClassIcon(wndHandler, wndControl)
 	self.parent.settings.memberShowClassIcon = wndControl:IsChecked()
 	self.parent:UpdateClassIcons()
@@ -292,6 +297,20 @@ end
 function Options:OnHideInGroups(wndHandler, wndControl)
 	self.parent.settings.hideInGroups = wndControl:IsChecked()
 	self.parent:Show()
+end
+
+function Options:OnShowShieldBar(wndHandler, wndControl)
+	self.parent.settings.memberShowShieldBar = wndControl:IsChecked()
+
+	self.parent:ArrangeMemberFrames()
+	self.parent:ArrangeMembers()
+end
+
+function Options:OnShowAbsorbBar(wndHandler, wndControl)
+	self.parent.settings.memberShowAbsorbBar = wndControl:IsChecked()
+
+	self.parent:ArrangeMemberFrames()
+	self.parent:ArrangeMembers()
 end
 
 function Options:OnShieldsBelowHealth(wndHandler, wndControl)

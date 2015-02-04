@@ -147,22 +147,49 @@ end
 function Member:Arrange()
 	self.frame:SetAnchorOffsets(0, 0, self:GetWidth() + self.settings.memberPaddingLeft + self.settings.memberPaddingRight, self:GetHeight() + self.settings.memberPaddingTop + self.settings.memberPaddingBottom)
 	self.container:SetAnchorOffsets(self.settings.memberPaddingLeft, self.settings.memberPaddingTop, -self.settings.memberPaddingRight, self.settings.memberPaddingBottom)
+
 	if self.settings.memberShieldsBelowHealth then
-		self.frame:FindChild("Health"):SetAnchorOffsets(1, 1, -1, -1 - self.settings.memberShieldHeight - self.settings.memberAbsorbHeight)
+		local shieldHeight = self.settings.memberShowShieldBar and self.settings.memberShieldHeight or 0
+		local absorbHeight = self.settings.memberShowAbsorbBar and self.settings.memberAbsorbHeight or 0
 
-		self.frame:FindChild("Shield"):SetAnchorPoints(0, 1, 1, 1)
-		self.frame:FindChild("Shield"):SetAnchorOffsets(1, -1 - self.settings.memberShieldHeight, -1, -1)
+		self.frame:FindChild("Health"):SetAnchorOffsets(1, 1, -1, -1 - shieldHeight - absorbHeight)
 
-		self.frame:FindChild("Absorption"):SetAnchorPoints(0, 1, 1, 1)
-		self.frame:FindChild("Absorption"):SetAnchorOffsets(1, -1 - self.settings.memberAbsorbHeight - self.settings.memberShieldHeight, -1, -1 - self.settings.memberShieldHeight)
+		if self.settings.memberShowShieldBar then
+			self.frame:FindChild("Shield"):Show(true, true)
+			self.frame:FindChild("Shield"):SetAnchorPoints(0, 1, 1, 1)
+			self.frame:FindChild("Shield"):SetAnchorOffsets(1, -1 - self.settings.memberShieldHeight, -1, -1)
+		else
+			self.frame:FindChild("Shield"):Show(false, true)
+		end
+
+		if self.settings.memberShowAbsorbBar then
+			self.frame:FindChild("Absorption"):Show(true, true)
+			self.frame:FindChild("Absorption"):SetAnchorPoints(0, 1, 1, 1)
+			self.frame:FindChild("Absorption"):SetAnchorOffsets(1, -1 - self.settings.memberAbsorbHeight - self.settings.memberShieldHeight, -1, -1 - self.settings.memberShieldHeight)
+		else
+			self.frame:FindChild("Absorption"):Show(false, true)
+		end
 	else
-		self.frame:FindChild("Health"):SetAnchorOffsets(1, 1, -1 - self.settings.memberShieldWidth - self.settings.memberAbsorbWidth, -1)
+		local shieldWidth = self.settings.memberShowShieldBar and self.settings.memberShieldWidth or 0
+		local absorbWidth = self.settings.memberShowAbsorbBar and self.settings.memberAbsorbWidth or 0
 
-		self.frame:FindChild("Shield"):SetAnchorPoints(1, 0, 1, 1)
-		self.frame:FindChild("Shield"):SetAnchorOffsets(-1 - self.settings.memberShieldWidth - self.settings.memberAbsorbWidth, 1, -1 - self.settings.memberAbsorbWidth, -1)
+		self.frame:FindChild("Health"):SetAnchorOffsets(1, 1, -1 - shieldWidth - absorbWidth, -1)
 
-		self.frame:FindChild("Absorption"):SetAnchorPoints(1, 0, 1, 1)
-		self.frame:FindChild("Absorption"):SetAnchorOffsets(-1 - self.settings.memberAbsorbWidth, 1, -1, -1)
+		if self.settings.memberShowShieldBar then
+			self.frame:FindChild("Shield"):Show(true, true)
+			self.frame:FindChild("Shield"):SetAnchorPoints(1, 0, 1, 1)
+			self.frame:FindChild("Shield"):SetAnchorOffsets(-1 - self.settings.memberShieldWidth - self.settings.memberAbsorbWidth, 1, -1 - self.settings.memberAbsorbWidth, -1)
+		else
+			self.frame:FindChild("Shield"):Show(false, true)
+		end
+
+		if self.settings.memberShowAbsorbBar then
+			self.frame:FindChild("Absorption"):Show(true, true)
+			self.frame:FindChild("Absorption"):SetAnchorPoints(1, 0, 1, 1)
+			self.frame:FindChild("Absorption"):SetAnchorOffsets(-1 - self.settings.memberAbsorbWidth, 1, -1, -1)
+		else
+			self.frame:FindChild("Absorption"):Show(false, true)
+		end
 	end
 end
 
@@ -295,6 +322,8 @@ function Member:Refresh(readyCheckMode, unit, groupMember)
 				self:SetHealthColor("00ff00")
 			end
 		end
+	elseif self.settings.memberBuffIconsOutOfFight then
+		self:RefreshBuffIcons()
 	end
 end
 
