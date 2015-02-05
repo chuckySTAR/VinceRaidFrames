@@ -96,7 +96,7 @@ function Options:Show(xmlDoc)
 		local title = self.wndMain:FindChild("Title")
 		title:SetText(title:GetText() .. " v" .. Utilities.GetAddonVersion())
 
-		Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames Options"})
+		Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames Options", nSaveVersion = 2})
 	end
 end
 
