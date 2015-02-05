@@ -31,7 +31,8 @@ VinceRaidFrames.NamingMode = {
 }
 VinceRaidFrames.ColorBy = {
 	Class = 1,
-	Health = 2
+	Health = 2,
+	FixedColor = 3
 }
 
 local SortIdToName = {
@@ -107,6 +108,7 @@ function VinceRaidFrames:new(o)
 		memberAggroTextColor = {a = 1, r = .86, g = .28, b = .28},
 		memberLowHealthColor = {r = 1, g = 0, b = 0},
 		memberHighHealthColor = {r = 0, g = 1, b = 0},
+		memberBackgroundColor = "555555",
 		memberPaddingLeft = 0,
 		memberPaddingTop = 0,
 		memberPaddingRight = 20,
@@ -126,16 +128,19 @@ function VinceRaidFrames:new(o)
 		memberShowShieldBar = true,
 		memberShowAbsorbBar = true,
 		memberShowArrow = false,
+		memberFlashInterrupts = true,
+		memberFlashDispels = true,
 		hintArrowOnHover = false,
 		targetOnHover = false,
 		sortBy = 1,
 		colorBy = VinceRaidFrames.ColorBy.Class,
 		padding = 5,
 		groups = nil,
-		refreshInterval = .3,
+		refreshInterval = .2,
 		backgroundAlpha = .2,
 		interruptFlashDuration = 2.5,
-		readyCheckTimeout = 60,
+		dispelFlashDuration = 2.5,
+		readyCheckTimeout = 45,
 		locked = false,
 		hideInGroups = false,
 		namingMode = VinceRaidFrames.NamingMode.Shorten
@@ -188,6 +193,7 @@ function VinceRaidFrames:OnLoad()
 
 	ApolloRegisterEventHandler("CombatLogCCState", "OnCombatLogCCState", self)
 	ApolloRegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
+	ApolloRegisterEventHandler("CombatLogDispel", "OnCombatLogDispel", self)
 
 	ApolloRegisterSlashCommand("vrf", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("vinceraidframes", "OnSlashCommand", self)
@@ -1048,6 +1054,9 @@ end
 
 
 function VinceRaidFrames:OnCombatLogCCState(e)
+	if not self.settings.memberFlashInterrupts then
+		return
+	end
 	if e.nInterruptArmorHit > 0 and e.unitCaster and not WrongInterruptBaseSpellIds[e.splCallingSpell:GetBaseSpellId()] then
 		local member = self.members[e.unitCaster:GetName()]
 		if member then
@@ -1057,10 +1066,25 @@ function VinceRaidFrames:OnCombatLogCCState(e)
 end
 
 function VinceRaidFrames:OnCombatLogVitalModifier(e)
+	if not self.settings.memberFlashInterrupts then
+		return
+	end
 	if e.eVitalType == GameLibCodeEnumVitalInterruptArmor and e.unitCaster and e.nAmount < 0 then
 		local member = self.members[e.unitCaster:GetName()]
 		if member then
 			member:Interrupted(e.nAmount * -1)
+		end
+	end
+end
+
+function VinceRaidFrames:OnCombatLogDispel(e)
+	if not self.settings.memberFlashDispels then
+		return
+	end
+	if e.unitCaster and e.nInstancesRemoved > 0 then
+		local member = self.members[e.unitCaster:GetName()]
+		if member then
+			member:Dispelled(e.nInstancesRemoved)
 		end
 	end
 end

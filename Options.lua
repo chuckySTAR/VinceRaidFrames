@@ -19,7 +19,8 @@ local SortIdToName = {
 
 local ColorIdToName = {
 	[VinceRaidFrames.ColorBy.Class] = "ColorByClass",
-	[VinceRaidFrames.ColorBy.Health] = "ColorByHealth"
+	[VinceRaidFrames.ColorBy.Health] = "ColorByHealth",
+	[VinceRaidFrames.ColorBy.FixedColor] = "FixedColor"
 }
 
 local NamingModeIdToName = {
@@ -122,7 +123,9 @@ function Options:OnCategorySelect(wndHandler)
 			end)
 			self.backgroundAlphaSliderWidget = self:InitSliderWidget(options:FindChild("BackgroundAlpha"), self.backgroundAlphaMin, self.backgroundAlphaMax, self.backgroundAlphaTick, self.parent.settings.backgroundAlpha, 2, function (value)
 				self.parent.settings.backgroundAlpha = value
-				self.parent.wndMain:SetBGColor(("%02x000000"):format(value * 255))
+				if self.parent.wndMain then
+					self.parent.wndMain:SetBGColor(("%02x000000"):format(value * 255))
+				end
 			end)
 			options:FindChild("HideInGroups"):SetCheck(self.parent.settings.hideInGroups)
 
@@ -136,16 +139,103 @@ function Options:OnCategorySelect(wndHandler)
 			options:FindChild("ColorByHealth"):SetData(VinceRaidFrames.ColorBy.Health)
 			options:FindChild(ColorIdToName[self.parent.settings.colorBy]):SetCheck(true)
 
-			options:FindChild("ShowArrow"):SetCheck(self.parent.settings.memberShowArrow)
-			options:FindChild("BuffIconsOutOfFight"):SetCheck(self.parent.settings.memberBuffIconsOutOfFight)
-			options:FindChild("ShowShieldBar"):SetCheck(self.parent.settings.memberShowShieldBar)
-			options:FindChild("ShowAbsorbBar"):SetCheck(self.parent.settings.memberShowAbsorbBar)
-			options:FindChild("ShieldsBelowHealth"):SetCheck(self.parent.settings.memberShieldsBelowHealth)
-			options:FindChild("ClassIcon"):SetCheck(self.parent.settings.memberShowClassIcon)
-			options:FindChild("TargetOnHover"):SetCheck(self.parent.settings.targetOnHover)
-			options:FindChild("HintArrowOnHover"):SetCheck(self.parent.settings.hintArrowOnHover)
-			options:FindChild("FixedShieldLength"):SetCheck(true)
-			options:FindChild("FixedShieldLength"):Enable(false)
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("FlashInterrupts"),
+				value = self.parent.settings.memberFlashInterrupts,
+				callback = function (value)
+					self.parent.settings.memberFlashInterrupts = value
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("FlashDispels"),
+				value = self.parent.settings.memberFlashDispels,
+				callback = function (value)
+					self.parent.settings.memberFlashDispels = value
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("ShowArrow"),
+				value = self.parent.settings.memberShowArrow,
+				callback = function (value)
+					self.parent.settings.memberShowArrow = value
+
+					if not value then
+						Apollo.RemoveEventHandler("VarChange_FrameCount", self.parent)
+						self.parent:HideMemberArrows()
+					else
+						if self.parent.wndMain:IsShown() then
+							Apollo.RegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self.parent)
+						end
+					end
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("BuffIconsOutOfFight"),
+				value = self.parent.settings.memberBuffIconsOutOfFight,
+				callback = function (value)
+					self.parent.settings.memberBuffIconsOutOfFight = value
+
+					if not value then
+						self.parent:RemoveBuffIcons()
+					end
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("ShowShieldBar"),
+				value = self.parent.settings.memberShowShieldBar,
+				callback = function (value)
+					self.parent.settings.memberShowShieldBar = value
+
+					self.parent:ArrangeMemberFrames()
+					self.parent:ArrangeMembers()
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("ShowAbsorbBar"),
+				value = self.parent.settings.memberShowAbsorbBar,
+				callback = function (value)
+					self.parent.settings.memberShowAbsorbBar = value
+
+					self.parent:ArrangeMemberFrames()
+					self.parent:ArrangeMembers()
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("ShieldsBelowHealth"),
+				value = self.parent.settings.memberShieldsBelowHealth,
+				callback = function (value)
+					self.parent.settings.memberShieldsBelowHealth = value
+
+					self:ToggleShieldWidthHeight()
+
+					self.parent:ArrangeMemberFrames()
+					self.parent:ArrangeMembers()
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("ClassIcon"),
+				value = self.parent.settings.memberShowClassIcon,
+				callback = function (value)
+					self.parent.settings.memberShowClassIcon = value
+					self.parent:UpdateClassIcons()
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("TargetOnHover"),
+				value = self.parent.settings.targetOnHover,
+				callback = function (value)
+					self.parent.settings.targetOnHover = value
+				end
+			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("HintArrowOnHover"),
+				value = self.parent.settings.hintArrowOnHover,
+				callback = function (value)
+					self.parent.settings.hintArrowOnHover = value
+				end
+			}
+--			options:FindChild("FixedShieldLength"):SetCheck(true)
+--			options:FindChild("FixedShieldLength"):Enable(false)
 
 			self:ToggleShieldWidthHeight()
 
@@ -196,13 +286,65 @@ function Options:OnCategorySelect(wndHandler)
 			paddingBottom:SetText(self.parent.settings.memberPaddingBottom)
 			paddingBottom:SetData("memberPaddingBottom")
 
+			self:InitColorWidget{
+				editBox = options:FindChild("FixedColorInput"),
+				value = self.parent.settings.memberBackgroundColor,
+				callback = function (value)
+					self.parent.settings.memberBackgroundColor = value
+
+				end
+			}
+
 		elseif categoryName == "Colors" then
-			self:InitColorWidget(options:FindChild("WarriorColor"), options:FindChild("WarriorLabel"), GameLib.CodeEnumClass.Warrior)
-			self:InitColorWidget(options:FindChild("EngineerColor"), options:FindChild("EngineerLabel"), GameLib.CodeEnumClass.Engineer)
-			self:InitColorWidget(options:FindChild("EsperColor"), options:FindChild("EsperLabel"), GameLib.CodeEnumClass.Esper)
-			self:InitColorWidget(options:FindChild("MedicColor"), options:FindChild("MedicLabel"), GameLib.CodeEnumClass.Medic)
-			self:InitColorWidget(options:FindChild("StalkerColor"), options:FindChild("StalkerLabel"), GameLib.CodeEnumClass.Stalker)
-			self:InitColorWidget(options:FindChild("SpellslingerColor"), options:FindChild("SpellslingerLabel"), GameLib.CodeEnumClass.Spellslinger)
+			self:InitColorWidget{
+				editBox = options:FindChild("WarriorColor"),
+				value = self.parent.settings.classColors[GameLib.CodeEnumClass.Warrior],
+				callback = function (value)
+					self.parent.settings.classColors[GameLib.CodeEnumClass.Warrior] = value
+					self.parent:UpdateClassColors()
+				end
+			}
+			self:InitColorWidget{
+				editBox = options:FindChild("EngineerColor"),
+				value = self.parent.settings.classColors[GameLib.CodeEnumClass.Engineer],
+				callback = function (value)
+					self.parent.settings.classColors[GameLib.CodeEnumClass.Engineer] = value
+					self.parent:UpdateClassColors()
+				end
+			}
+			self:InitColorWidget{
+				editBox = options:FindChild("EsperColor"),
+				value = self.parent.settings.classColors[GameLib.CodeEnumClass.Esper],
+				callback = function (value)
+					self.parent.settings.classColors[GameLib.CodeEnumClass.Esper] = value
+					self.parent:UpdateClassColors()
+				end
+			}
+			self:InitColorWidget{
+				editBox = options:FindChild("MedicColor"),
+				value = self.parent.settings.classColors[GameLib.CodeEnumClass.Medic],
+				callback = function (value)
+					self.parent.settings.classColors[GameLib.CodeEnumClass.Medic] = value
+					self.parent:UpdateClassColors()
+				end
+			}
+			self:InitColorWidget{
+				editBox = options:FindChild("StalkerColor"),
+				value = self.parent.settings.classColors[GameLib.CodeEnumClass.Stalker],
+				callback = function (value)
+					self.parent.settings.classColors[GameLib.CodeEnumClass.Stalker] = value
+					self.parent:UpdateClassColors()
+				end
+			}
+			self:InitColorWidget{
+				editBox = options:FindChild("SpellslingerColor"),
+				value = self.parent.settings.classColors[GameLib.CodeEnumClass.Spellslinger],
+				callback = function (value)
+					self.parent.settings.classColors[GameLib.CodeEnumClass.Spellslinger] = value
+					self.parent:UpdateClassColors()
+				end
+			}
+
 		elseif categoryName == "Names" then
 			options:FindChild("NamingModeDefault"):SetData(VinceRaidFrames.NamingMode.Default)
 			options:FindChild("NamingModeShorten"):SetData(VinceRaidFrames.NamingMode.Shorten)
@@ -288,66 +430,9 @@ function Options:OnNewCustomName()
 	self.parent:RenameMembers()
 end
 
-function Options:OnTargetOnHover(wndHandler, wndControl)
-	self.parent.settings.targetOnHover = wndControl:IsChecked()
-end
-
-function Options:OnHintArrowOnHover(wndHandler, wndControl)
-	self.parent.settings.hintArrowOnHover = wndControl:IsChecked()
-end
-
-function Options:OnBuffIconsOutOfFight(wndHandler, wndControl)
-	self.parent.settings.memberBuffIconsOutOfFight = wndControl:IsChecked()
-
-	if not self.parent.settings.memberBuffIconsOutOfFight then
-		self.parent:RemoveBuffIcons()
-	end
-end
-
-function Options:OnShowClassIcon(wndHandler, wndControl)
-	self.parent.settings.memberShowClassIcon = wndControl:IsChecked()
-	self.parent:UpdateClassIcons()
-end
-
 function Options:OnHideInGroups(wndHandler, wndControl)
 	self.parent.settings.hideInGroups = wndControl:IsChecked()
 	self.parent:Show()
-end
-
-function Options:OnShowArrow(wndHandler, wndControl)
-	self.parent.settings.memberShowArrow = wndControl:IsChecked()
-
-	if not self.parent.settings.memberShowArrow then
-		Apollo.RemoveEventHandler("VarChange_FrameCount", self.parent)
-		self.parent:HideMemberArrows()
-	else
-		if self.parent.wndMain:IsShown() then
-			Apollo.RegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self.parent)
-		end
-	end
-end
-
-function Options:OnShowShieldBar(wndHandler, wndControl)
-	self.parent.settings.memberShowShieldBar = wndControl:IsChecked()
-
-	self.parent:ArrangeMemberFrames()
-	self.parent:ArrangeMembers()
-end
-
-function Options:OnShowAbsorbBar(wndHandler, wndControl)
-	self.parent.settings.memberShowAbsorbBar = wndControl:IsChecked()
-
-	self.parent:ArrangeMemberFrames()
-	self.parent:ArrangeMembers()
-end
-
-function Options:OnShieldsBelowHealth(wndHandler, wndControl)
-	self.parent.settings.memberShieldsBelowHealth = wndControl:IsChecked()
-
-	self:ToggleShieldWidthHeight()
-
-	self.parent:ArrangeMemberFrames()
-	self.parent:ArrangeMembers()
 end
 
 function Options:ToggleShieldWidthHeight()
@@ -392,21 +477,34 @@ function Options:InitSliderWidget(frame, min, max, tick, value, roundDigits, cal
 	return frame
 end
 
-function Options:InitColorWidget(editBox, label, key)
-	local value = self.parent.settings.classColors[key]
-	editBox:SetText(value)
-	editBox:SetData({label, key})
-	editBox:SetMaxTextLength(6)
-	label:SetTextColor("ff" .. value)
+function Options:InitColorWidget(data)
+	data.editBox:SetData{
+		callback = data.callback
+	}
+	data.editBox:SetText(data.value)
+	data.editBox:SetMaxTextLength(6)
+	data.editBox:SetTextColor("ff" .. data.value)
+	data.editBox:AddEventHandler("EditBoxChanged", "OnColorWidgetEditBoxChanged")
 end
 
-function Options:OnClassColorChanged(wndHandler)
+function Options:OnColorWidgetEditBoxChanged(wndHandler, wndControl)
 	local text = wndHandler:GetText()
-	local label, key = unpack(wndHandler:GetData())
 	local value = tonumber(text, 16) and text or "ffffff"
-	self.parent.settings.classColors[key] = value
-	label:SetTextColor("ff" .. value)
-	self.parent:UpdateClassColors()
+	wndHandler:SetTextColor("ff" .. value)
+	wndHandler:GetData().callback(value)
+end
+
+function Options:InitCheckboxWidget(data)
+	data.checkbox:SetData{
+		callback = data.callback
+	}
+	data.checkbox:SetCheck(data.value)
+	data.checkbox:AddEventHandler("ButtonCheck", "OnCheckboxWidget")
+	data.checkbox:AddEventHandler("ButtonUncheck", "OnCheckboxWidget")
+end
+
+function Options:OnCheckboxWidget(wndHandler, wndControl)
+	wndHandler:GetData().callback(wndControl:IsChecked())
 end
 
 function Options:OnResetColors()

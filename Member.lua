@@ -85,7 +85,8 @@ function Member:new(unit, groupMember, parent)
 		flash = nil,
 		text = nil,
 		arrow = nil,
-		timer = nil, -- for interrupts
+		interruptTimer = nil,
+		dispelTimer = nil,
 		outOfRange = false,
 		dead = false,
 		online = true,
@@ -120,6 +121,7 @@ function Member:Build(parent)
 	self.shield = self.frame:FindChild("ShieldBar")
 	self.absorb = self.frame:FindChild("AbsorbBar")
 	self.flash = self.frame:FindChild("Flash")
+	self.flash2 = self.frame:FindChild("Flash2")
 	self.text = self.frame:FindChild("Text")
 	self.arrow = self.frame:FindChild("Arrow")
 
@@ -132,6 +134,7 @@ function Member:Build(parent)
 	self.frame:SetData(self)
 	self.container:SetData(self)
 	self.flash:Show(false, true)
+	self.flash2:Show(false, true)
 	self:UpdateReadyCheckMode()
 	self:Refresh(self.unit, self.groupMember)
 
@@ -251,10 +254,12 @@ function Member:ShowClassIcon(show)
 end
 
 function Member:UpdateColorBy(color)
-	if color == VinceRaidFrames.ColorBy.Class and not self.parent.readyCheckActive then
-		self:SetHealthColor(self.classColor)
-	elseif color == VinceRaidFrames.ColorBy.Health then
-		self:Refresh(nil, self.groupMember)
+	if not self.parent.readyCheckActive then
+		if color == VinceRaidFrames.ColorBy.Class then
+			self:SetHealthColor(self.classColor)
+		elseif color == VinceRaidFrames.ColorBy.FixedColor then
+			self:SetHealthColor(self.parent.settings.memberBackgroundColor)
+		end
 	end
 end
 
@@ -335,7 +340,7 @@ function Member:Refresh(unit, groupMember)
 			if not self.groupMember.bReady then
 				self:SetHealthColor("ff0000")
 			elseif not self.potionPixie or not self.foodPixie then
-				self:SetHealthColor("ffff00")
+				self:SetHealthColor("ccff00")
 			else
 				self:SetHealthColor("00ff00")
 			end
@@ -543,12 +548,21 @@ function Member:RemoveFood()
 end
 
 function Member:Interrupted(amount)
-	if self.timer then
-		self.timer:Start()
+	if self.interruptTimer then
+		self.interruptTimer:Start()
 	else
-		self.timer = ApolloTimer.Create(self.settings.interruptFlashDuration, false, "OnInterruptedEnd", self)
+		self.interruptTimer = ApolloTimer.Create(self.settings.interruptFlashDuration, false, "OnInterruptedEnd", self)
 	end
 	self.flash:Show(true, true)
+end
+
+function Member:Dispelled(amount)
+	if self.dispelTimer then
+		self.dispelTimer:Start()
+	else
+		self.dispelTimer = ApolloTimer.Create(self.settings.dispelFlashDuration, false, "OnDispelEnd", self)
+	end
+	self.flash2:Show(true, true)
 end
 
 function Member:UpdateHealthAlpha()
@@ -657,6 +671,10 @@ end
 
 function Member:OnInterruptedEnd()
 	self.flash:Show(false)
+end
+
+function Member:OnDispelEnd()
+	self.flash2:Show(false)
 end
 
 function Member:Hide()
