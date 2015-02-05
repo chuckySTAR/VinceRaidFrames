@@ -136,6 +136,7 @@ function Options:OnCategorySelect(wndHandler)
 			options:FindChild("ColorByHealth"):SetData(VinceRaidFrames.ColorBy.Health)
 			options:FindChild(ColorIdToName[self.parent.settings.colorBy]):SetCheck(true)
 
+			options:FindChild("ShowArrow"):SetCheck(self.parent.settings.memberShowArrow)
 			options:FindChild("BuffIconsOutOfFight"):SetCheck(self.parent.settings.memberBuffIconsOutOfFight)
 			options:FindChild("ShowShieldBar"):SetCheck(self.parent.settings.memberShowShieldBar)
 			options:FindChild("ShowAbsorbBar"):SetCheck(self.parent.settings.memberShowAbsorbBar)
@@ -311,6 +312,19 @@ end
 function Options:OnHideInGroups(wndHandler, wndControl)
 	self.parent.settings.hideInGroups = wndControl:IsChecked()
 	self.parent:Show()
+end
+
+function Options:OnShowArrow(wndHandler, wndControl)
+	self.parent.settings.memberShowArrow = wndControl:IsChecked()
+
+	if not self.parent.settings.memberShowArrow then
+		Apollo.RemoveEventHandler("VarChange_FrameCount", self.parent)
+		self.parent:HideMemberArrows()
+	else
+		if self.parent.wndMain:IsShown() then
+			Apollo.RegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self.parent)
+		end
+	end
 end
 
 function Options:OnShowShieldBar(wndHandler, wndControl)

@@ -64,6 +64,7 @@ end
 function Member:new(unit, groupMember, parent)
 	local o = {
 		unit = unit,
+		player = false,
 		name = groupMember and groupMember.strCharacterName or unit:GetName(),
 		groupMember = groupMember,
 		version = nil, -- updated on iccomm messages
@@ -83,6 +84,7 @@ function Member:new(unit, groupMember, parent)
 		health = nil,
 		flash = nil,
 		text = nil,
+		arrow = nil,
 		timer = nil, -- for interrupts
 		outOfRange = false,
 		dead = false,
@@ -101,6 +103,10 @@ function Member:new(unit, groupMember, parent)
 end
 
 function Member:Build(parent)
+	if self.unit and self.unit:IsThePlayer() then
+		self.player = true
+	end
+
 	self.frame = Apollo.LoadForm(self.xmlDoc, "Member", parent, Member)
 
 	self.classColor = self.settings.classColors[self.classId]
@@ -115,6 +121,7 @@ function Member:Build(parent)
 	self.absorb = self.frame:FindChild("AbsorbBar")
 	self.flash = self.frame:FindChild("Flash")
 	self.text = self.frame:FindChild("Text")
+	self.arrow = self.frame:FindChild("Arrow")
 
 	self:Arrange()
 	self:ShowClassIcon(self.settings.memberShowClassIcon)
@@ -128,7 +135,11 @@ function Member:Build(parent)
 	self:UpdateReadyCheckMode()
 	self:Refresh(self.unit, self.groupMember)
 
-	-- Bug: SetTarget() isn't updated on reloadui
+	if self.player then
+		self.arrow:Show(false, true)
+	end
+
+	-- Todo: SetTarget() isn't updated on reloadui
 end
 
 function Member:SetName(name)
@@ -190,6 +201,14 @@ function Member:Arrange()
 			self.frame:FindChild("Absorption"):Show(false, true)
 		end
 	end
+end
+
+function Member:SetArrowRotation(rotation)
+	self.arrow:SetRotation(rotation)
+end
+
+function Member:ShowArrow(show)
+	self.arrow:Show(show)
 end
 
 function Member:SetAggro(aggro)
@@ -325,14 +344,15 @@ function Member:Refresh(unit, groupMember)
 end
 
 function Member:RefreshBuffs()
+	local buffs
 	if self.unit then
-		local buffs = self.unit:GetBuffs()
-		if buffs then
-			if self.parent.readyCheckActive or (self.settings.memberBuffIconsOutOfFight and self.parent.inCombat) then
-				self:RefreshBuffIcons(buffs)
-			end
-			self:RefreshCleanseIndicator(buffs)
-		end
+		buffs = self.unit:GetBuffs()
+	end
+
+	self:RefreshCleanseIndicator(buffs)
+
+	if self.parent.readyCheckActive or (self.settings.memberBuffIconsOutOfFight and self.parent.inCombat) then
+		self:RefreshBuffIcons(buffs)
 	end
 end
 
@@ -364,10 +384,12 @@ end
 
 function Member:RefreshCleanseIndicator(buffs)
 	local canCleanse = false
-	for i, buff in ipairs(buffs.arHarmful) do
-		if buff.splEffect:GetClass() == SpellCodeEnumSpellClassDebuffDispellable then
-			canCleanse = true
-			break
+	if buffs then
+		for i, buff in ipairs(buffs.arHarmful) do
+			if buff.splEffect:GetClass() == SpellCodeEnumSpellClassDebuffDispellable then
+				canCleanse = true
+				break
+			end
 		end
 	end
 	if canCleanse then
@@ -380,19 +402,21 @@ end
 function Member:RefreshBuffIcons(buffs)
 	local potionFound = false
 	local foodFound = false
-	for key, buff in ipairs(buffs.arBeneficial) do
-		local potionSprite = Potions[buff.splEffect:GetId()]
-		local foodSprite = buff.splEffect:GetName() == FoodBuffName and "IconSprites:Icon_ItemMisc_UI_Item_Sammich"
-		if potionSprite then
-			potionFound = true
-			self:AddPotion(potionSprite)
-		end
-		if foodSprite then
-			foodFound = true
-			self:AddFood(foodSprite)
-		end
-		if potionFound and foodFound then
-			break
+	if buffs then
+		for key, buff in ipairs(buffs.arBeneficial) do
+			local potionSprite = Potions[buff.splEffect:GetId()]
+			local foodSprite = buff.splEffect:GetName() == FoodBuffName and "IconSprites:Icon_ItemMisc_UI_Item_Sammich"
+			if potionSprite then
+				potionFound = true
+				self:AddPotion(potionSprite)
+			end
+			if foodSprite then
+				foodFound = true
+				self:AddFood(foodSprite)
+			end
+			if potionFound and foodFound then
+				break
+			end
 		end
 	end
 	if not potionFound then

@@ -6,6 +6,8 @@ local max = math.max
 local min = math.min
 local ceil = math.ceil
 local floor = math.floor
+local deg = math.deg
+local atan2 = math.atan2
 local tinsert = table.insert
 
 local Apollo = Apollo
@@ -18,6 +20,7 @@ local GroupLibGetGroupMember = GroupLib.GetGroupMember
 local GroupLibGetUnitForGroupMember = GroupLib.GetUnitForGroupMember
 local GameLibGetPlayerUnit = GameLib.GetPlayerUnit
 local GameLibCodeEnumVitalInterruptArmor = GameLib.CodeEnumVital.InterruptArmor
+local GameLibGetCurrentZoneMap = GameLib.GetCurrentZoneMap
 local UnitCodeEnumDispositionFriendly = Unit.CodeEnumDisposition.Friendly
 
 
@@ -72,6 +75,7 @@ function VinceRaidFrames:new(o)
 	o.members = {}
 	o.mobsInCombat = {}
 	o.groupFrames = {}
+	o.indexToMember = {}
 	o.leader = ""
 	o.editMode = false -- dragndrop of members
 	o.addonVersionAnnounceTimer = nil
@@ -121,6 +125,7 @@ function VinceRaidFrames:new(o)
 		memberBuffIconsOutOfFight = false,
 		memberShowShieldBar = true,
 		memberShowAbsorbBar = true,
+		memberShowArrow = false,
 		hintArrowOnHover = false,
 		targetOnHover = false,
 		sortBy = 1,
@@ -274,6 +279,10 @@ function VinceRaidFrames:OnDocLoaded_Main()
 
 	self.wndMain:SetBGColor(("%02x000000"):format(self.settings.backgroundAlpha * 255))
 
+	if self.settings.memberShowArrow then
+		ApolloRegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self)
+	end
+
 	ApolloRegisterEventHandler("ICCommReceiveThrottled", "OnICCommReceiveThrottled", self)
 
 	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
@@ -425,6 +434,9 @@ function VinceRaidFrames:Hide()
 		self.timer:Stop()
 		self.wndMain:Close()
 
+		Apollo.RemoveEventHandler("VarChange_FrameCount", self)
+		Apollo.RemoveEventHandler("ICCommReceiveThrottled", self)
+
 		--		self.wndMain:Destroy()
 		--		self.wndMain = nil
 	end
@@ -450,7 +462,7 @@ function VinceRaidFrames:ShareAddonVersion()
 end
 
 function VinceRaidFrames:OnShareAddonVersionTimer()
-	if self.channel and self.leader then
+	if self.channel and self.leader then -- Todo: dont send to myself
 		self.channel:SendPrivateMessage(self.leader, {version = self.Utilities.GetAddonVersion()})
 		log("Sending version to " .. self.leader)
 	end
@@ -559,6 +571,8 @@ function VinceRaidFrames:BuildMembers()
 		return
 	end
 
+	self.indexToMember = {}
+
 	local newMembers = {}
 	local count = GroupLibGetMemberCount()
 	for i = 1, count do
@@ -570,6 +584,7 @@ function VinceRaidFrames:BuildMembers()
 			member = self.Member:new(unit, groupMember, self)
 			self.members[name] = member
 		end
+		self.indexToMember[i] = member
 		newMembers[name] = true
 	end
 	-- Remove left members
@@ -935,6 +950,31 @@ end
 function VinceRaidFrames:OnICCommReceiveThrottled(...)
 	if debug then
 		SendVarToRover("iccommthrottle", {...}, 0)
+	end
+end
+
+function VinceRaidFrames:OnVarChange_FrameCount()
+	local player = GameLibGetPlayerUnit()
+	local playerPosition = player:GetPosition()
+	local playerHeading = player:GetHeading()
+
+	for name, member in pairs(self.members) do
+		if not member.player then
+			if not member.dead and member.unit and member.unit:IsValid() then
+				local memberPosition = member.unit:GetPosition()
+				local angle = atan2(memberPosition.x - playerPosition.x, memberPosition.z - playerPosition.z)
+				member:ShowArrow(true)
+				member:SetArrowRotation(((deg(angle - playerHeading) + 180) % 360) * -1)
+			else
+				member:ShowArrow(false)
+			end
+		end
+	end
+end
+
+function VinceRaidFrames:HideMemberArrows()
+	for name, member in pairs(self.members) do
+		member:ShowArrow(false)
 	end
 end
 
