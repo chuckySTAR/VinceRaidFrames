@@ -454,7 +454,7 @@ function Member:UpdateReadyCheckMode()
 	else
 		self:UpdateColorBy(self.settings.colorBy)
 
-		if self.settings.memberBuffIconsOutOfFight and not self.parent.inCombat then
+		if not self.settings.memberBuffIconsOutOfFight then
 			self:RemoveBuffIcons()
 		end
 	end
