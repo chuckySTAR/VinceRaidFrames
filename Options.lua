@@ -137,6 +137,7 @@ function Options:OnCategorySelect(wndHandler)
 		elseif categoryName == "MemberCell" then
 			options:FindChild("ColorByClass"):SetData(VinceRaidFrames.ColorBy.Class)
 			options:FindChild("ColorByHealth"):SetData(VinceRaidFrames.ColorBy.Health)
+			options:FindChild("FixedColor"):SetData(VinceRaidFrames.ColorBy.FixedColor)
 			options:FindChild(ColorIdToName[self.parent.settings.colorBy]):SetCheck(true)
 
 			self:InitCheckboxWidget{
@@ -489,7 +490,7 @@ end
 
 function Options:OnColorWidgetEditBoxChanged(wndHandler, wndControl)
 	local text = wndHandler:GetText()
-	local value = tonumber(text, 16) and text or "ffffff"
+	local value = tonumber(text, 16) and text:len() == 6 and text or "ffffff"
 	wndHandler:SetTextColor("ff" .. value)
 	wndHandler:GetData().callback(value)
 end
