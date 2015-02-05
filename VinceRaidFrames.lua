@@ -1213,7 +1213,12 @@ function VinceRaidFrames:IsUnitMob(unit)
 end
 
 function VinceRaidFrames:OnCharacterCreated()
-	self.inCombat = GameLibGetPlayerUnit():IsInCombat()
+	local player = GameLibGetPlayerUnit()
+	self.inCombat = player:IsInCombat()
+	local member = self.members[player:GetName()]
+	if member then
+		member.player = true
+	end
 end
 
 function VinceRaidFrames:OnUnitCreated(unit)
