@@ -299,7 +299,7 @@ function Options:OnCategorySelect(wndHandler)
 				value = self.parent.settings.memberBackgroundColor,
 				callback = function (value)
 					self.parent.settings.memberBackgroundColor = value
-
+					self.parent:UpdateColorBy()
 				end
 			}
 

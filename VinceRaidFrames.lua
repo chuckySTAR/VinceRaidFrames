@@ -108,7 +108,7 @@ function VinceRaidFrames:new(o)
 		memberAggroTextColor = {a = 1, r = .86, g = .28, b = .28},
 		memberLowHealthColor = {r = 1, g = 0, b = 0},
 		memberHighHealthColor = {r = 0, g = 1, b = 0},
-		memberBackgroundColor = "555555",
+		memberBackgroundColor = "7f7f7f",
 		memberPaddingLeft = 0,
 		memberPaddingTop = 0,
 		memberPaddingRight = 20,
