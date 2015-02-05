@@ -47,7 +47,7 @@ local WrongInterruptBaseSpellIds = {
 
 
 
-local debug = true
+local debug = false
 
 local function log(str)
 	if debug then
@@ -130,6 +130,7 @@ function VinceRaidFrames:new(o)
 		memberShowArrow = false,
 		memberFlashInterrupts = true,
 		memberFlashDispels = true,
+		memberCleanseIndicator = true,
 		hintArrowOnHover = false,
 		targetOnHover = false,
 		sortBy = 1,

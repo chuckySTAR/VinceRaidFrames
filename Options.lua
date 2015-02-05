@@ -235,6 +235,13 @@ function Options:OnCategorySelect(wndHandler)
 					self.parent.settings.hintArrowOnHover = value
 				end
 			}
+			self:InitCheckboxWidget{
+				checkbox = options:FindChild("CleanseIndicator"),
+				value = self.parent.settings.memberCleanseIndicator,
+				callback = function (value)
+					self.parent.settings.memberCleanseIndicator = value
+				end
+			}
 --			options:FindChild("FixedShieldLength"):SetCheck(true)
 --			options:FindChild("FixedShieldLength"):Enable(false)
 

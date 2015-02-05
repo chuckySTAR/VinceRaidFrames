@@ -354,7 +354,7 @@ function Member:RefreshBuffs()
 		buffs = self.unit:GetBuffs()
 	end
 
-	self:RefreshCleanseIndicator(buffs)
+	self:RefreshCleanseIndicator(self.settings.memberCleanseIndicator and buffs or nil)
 
 	if self.parent.readyCheckActive or (self.settings.memberBuffIconsOutOfFight and self.parent.inCombat) then
 		self:RefreshBuffIcons(buffs)
