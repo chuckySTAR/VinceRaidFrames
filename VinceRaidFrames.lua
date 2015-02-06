@@ -47,7 +47,7 @@ local WrongInterruptBaseSpellIds = {
 
 
 
-local debug = false
+local debug = true
 
 local function log(str)
 	if debug then
@@ -172,11 +172,14 @@ function VinceRaidFrames:OnLoad()
 	ApolloRegisterEventHandler("Group_Changed", "OnGroup_Changed", self)
 	ApolloRegisterEventHandler("Group_Remove", "OnGroup_Remove", self)
 	ApolloRegisterEventHandler("Group_ReadyCheck", "OnGroup_ReadyCheck", self)
+	ApolloRegisterEventHandler("Group_FlagsChanged", "OnGroup_FlagsChanged", self)
 	ApolloRegisterEventHandler("Group_MemberFlagsChanged", "OnGroup_MemberFlagsChanged", self)
 	ApolloRegisterEventHandler("Group_MemberOrderChanged", "OnGroup_MemberOrderChanged", self)
 	ApolloRegisterEventHandler("VinceRaidFrames_Group_Online", "OnVinceRaidFrames_Group_Online", self)
 	ApolloRegisterEventHandler("VinceRaidFrames_Group_Offline", "OnVinceRaidFrames_Group_Offline", self)
+	ApolloRegisterEventHandler("ChangeWorld", "OnChangeWorld", self)
 	ApolloRegisterEventHandler("TargetUnitChanged", "OnTargetUnitChanged", self)
+--	ApolloRegisterEventHandler("GroupMemberPromoted", "OnGroupMemberPromoted", self)
 --	ApolloRegisterEventHandler("WindowManagementReady", "OnWindowManagementReady", self)
 	ApolloRegisterEventHandler("ToggleVinceRaidFrames", "OnToggleVinceRaidFrames", self)
 	ApolloRegisterEventHandler("MasterLootUpdate", "OnMasterLootUpdate", self)
@@ -249,9 +252,14 @@ end
 function VinceRaidFrames:Show()
 	if self.wndMain then
 		if self:ShouldShow() then
+			log("rebuild")
+
 			self.wndMain:Invoke()
+
 			self:OnMasterLootUpdate()
 			self:BuildMembers()
+			self:UpdateSyncToRaid()
+
 			self.timer:Start()
 		else
 			self:Hide()
@@ -594,6 +602,7 @@ function VinceRaidFrames:BuildMembers()
 		self.indexToMember[i] = member
 		newMembers[name] = true
 	end
+
 	-- Remove left members
 	for name, member in pairs(self.members) do
 		if not newMembers[name] then
@@ -601,6 +610,7 @@ function VinceRaidFrames:BuildMembers()
 			self.members[name] = nil
 		end
 	end
+
 	self:AddMemberNames()
 	self:RenameMembers()
 	self:ArrangeMembers()
@@ -1107,6 +1117,14 @@ function VinceRaidFrames:OnGroupBagBtn()
 	Event_FireGenericEvent("GenericEvent_ToggleGroupBag")
 end
 
+function VinceRaidFrames:OnRaidWrongInstance()
+	GroupLib.GotoGroupInstance()
+end
+
+function VinceRaidFrames:UpdateSyncToRaid()
+	self.wndMain:FindChild("RaidWrongInstance"):Show(GroupLib.CanGotoGroupInstance())
+end
+
 function VinceRaidFrames:OnMasterLootUpdate()
 	local tMasterLoot = GameLib.GetMasterLoot()
 	local bShowMasterLoot = tMasterLoot and #tMasterLoot > 0
@@ -1281,6 +1299,18 @@ end
 function VinceRaidFrames:OnRaidLockFrameBtnToggle(wndHandler, wndControl)
 	self.settings.locked = wndHandler:IsChecked()
 	self:SetLocked(self.settings.locked)
+end
+
+
+
+
+
+function VinceRaidFrames:OnChangeWorld()
+	self:Show()
+end
+
+function VinceRaidFrames:OnGroup_FlagsChanged()
+	self:Show()
 end
 
 function VinceRaidFrames:OnGroup_MemberFlagsChanged()
