@@ -47,7 +47,11 @@ local WrongInterruptBaseSpellIds = {
 
 
 
-local debug = true
+local debug = false
+--@debug@
+debug = true
+--@end-debug@
+
 
 local function log(str)
 	if debug then
@@ -258,7 +262,6 @@ function VinceRaidFrames:Show()
 
 			self:OnMasterLootUpdate()
 			self:BuildMembers()
-			self:UpdateSyncToRaid()
 
 			self.timer:Start()
 		else
@@ -553,6 +556,7 @@ function VinceRaidFrames:OnRefresh()
 
 	self:UpdateGroupButtons()
 	self:RefreshAggroIndicators()
+	self:UpdateSyncToGroup()
 end
 
 function VinceRaidFrames:UpdateGroupButtons()
@@ -1117,12 +1121,12 @@ function VinceRaidFrames:OnGroupBagBtn()
 	Event_FireGenericEvent("GenericEvent_ToggleGroupBag")
 end
 
-function VinceRaidFrames:OnRaidWrongInstance()
+function VinceRaidFrames:OnGroupWrongInstance()
 	GroupLib.GotoGroupInstance()
 end
 
-function VinceRaidFrames:UpdateSyncToRaid()
-	self.wndMain:FindChild("RaidWrongInstance"):Show(GroupLib.CanGotoGroupInstance())
+function VinceRaidFrames:UpdateSyncToGroup()
+	self.wndMain:FindChild("GroupWrongInstance"):Show(GroupLib.CanGotoGroupInstance())
 end
 
 function VinceRaidFrames:OnMasterLootUpdate()
@@ -1178,6 +1182,14 @@ function VinceRaidFrames:UpdateRoleButtons()
 		self.wndSelfConfigSetAsHealer:SetData(1)
 		self.wndSelfConfigSetAsNormTank:SetCheck(groupMember.bTank)
 		self.wndSelfConfigSetAsNormTank:SetData(1)
+	end
+end
+
+function VinceRaidFrames:OnPostGroupSetup(wndHandler, wndControl)
+	local party = ChatSystemLib.GetChannels()[ChatSystemLib.ChatChannel_Party]
+	for i, group in ipairs(self.settings.groups) do
+		party:Send(group.name .. ":")
+		party:Send(table.concat(group.members, ", "))
 	end
 end
 
@@ -1309,13 +1321,17 @@ function VinceRaidFrames:OnChangeWorld()
 	self:Show()
 end
 
-function VinceRaidFrames:OnGroup_FlagsChanged()
-	self:Show()
+function VinceRaidFrames:OnGroup_FlagsChanged(...)
+--	self:Show()
 end
 
-function VinceRaidFrames:OnGroup_MemberFlagsChanged()
+function VinceRaidFrames:OnGroup_MemberFlagsChanged(memberId, wat, flags)
+	if type(flags) == "table" and (flags.bTank or flags.bHealer or flags.bDPS) then
+		self:Show()
+	end
 --	self:UpdateRoleButtons()
-	self:Show()
+
+	SendVarToRover("member flags changed", {memberId, wat, flags}, 0)
 end
 
 function VinceRaidFrames:OnGroup_MemberOrderChanged()
