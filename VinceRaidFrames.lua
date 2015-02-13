@@ -135,6 +135,7 @@ function VinceRaidFrames:new(o)
 		memberFlashInterrupts = true,
 		memberFlashDispels = true,
 		memberCleanseIndicator = true,
+		memberOutOfRange = 30,
 		hintArrowOnHover = false,
 		targetOnHover = false,
 		sortBy = 1,
@@ -533,6 +534,8 @@ function VinceRaidFrames:OnTargetUnitChanged(unit)
 end
 
 function VinceRaidFrames:OnRefresh()
+	self.playerPos = Vector3.New(GameLibGetPlayerUnit():GetPosition())
+
 	local count = GroupLibGetMemberCount()
 	for i = 1, count do
 		local unit = GroupLibGetUnitForGroupMember(i)
@@ -1330,8 +1333,6 @@ function VinceRaidFrames:OnGroup_MemberFlagsChanged(memberId, wat, flags)
 		self:Show()
 	end
 --	self:UpdateRoleButtons()
-
-	SendVarToRover("member flags changed", {memberId, wat, flags}, 0)
 end
 
 function VinceRaidFrames:OnGroup_MemberOrderChanged()
