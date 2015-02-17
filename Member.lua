@@ -280,22 +280,23 @@ function Member:Refresh(unit, groupMember)
 
 		self.dead = groupMember.nHealth == 0 and groupMember.nHealthMax ~= 0
 		self.online = groupMember.bIsOnline
-
-		self.outOfRange = true
-		if unit and unit:IsValid() and self.parent.playerPos then
-			local position = unit:GetPosition()
-			if position then
-				self.outOfRange = (self.parent.playerPos - Vector3.New(position)):Length() > self.settings.memberOutOfRange
-			end
-		end
 	else
 		health = unit:GetHealth() / unit:GetMaxHealth()
 		shield = unit:GetShieldCapacity() / unit:GetShieldCapacityMax()
 		absorb = unit:GetAbsorptionMax() == 0 and 0 or unit:GetAbsorptionValue() / unit:GetAbsorptionMax()
 
-		self.outOfRange = false
 		self.dead = unit:IsDead()
 		self.online = true
+	end
+
+	self.outOfRange = true
+	if self.parent.player and self.parent.player:IsDead() then
+		self.outOfRange = false
+	elseif unit and unit:IsValid() and self.parent.playerPos then
+		local position = unit:GetPosition()
+		if position then
+			self.outOfRange = (self.parent.playerPos - Vector3.New(position)):Length() > self.settings.memberOutOfRange
+		end
 	end
 
 	if not wasOnline and self.online then

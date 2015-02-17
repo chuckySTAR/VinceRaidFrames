@@ -85,6 +85,8 @@ function VinceRaidFrames:new(o)
 	o.editMode = false -- dragndrop of members
 	o.addonVersionAnnounceTimer = nil
 	o.inCombat = false
+	o.playerPos = nil
+	o.player = nil
 
 	-- files overwrite these
 	self.Options = nil
@@ -534,7 +536,13 @@ function VinceRaidFrames:OnTargetUnitChanged(unit)
 end
 
 function VinceRaidFrames:OnRefresh()
-	self.playerPos = Vector3.New(GameLibGetPlayerUnit():GetPosition())
+	self.player = GameLibGetPlayerUnit()
+	if self.player then
+		local position = self.player:GetPosition()
+		if position then
+			self.playerPos = Vector3.New(position)
+		end
+	end
 
 	local count = GroupLibGetMemberCount()
 	for i = 1, count do
