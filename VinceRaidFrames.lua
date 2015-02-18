@@ -123,7 +123,7 @@ function VinceRaidFrames:new(o)
 		memberShowTargetMarker = true,
 		memberIconSizes = 16,
 		memberFillLeftToRight = true,
-		memberOutOfRangeOpacity = .5,
+		memberOutOfRangeOpacity = .6,
 		memberShieldsBelowHealth = false,
 		memberShieldHeight = 1,
 		memberAbsorbHeight = 1,
@@ -146,6 +146,7 @@ function VinceRaidFrames:new(o)
 		groups = nil,
 		refreshInterval = .2,
 		backgroundAlpha = .2,
+		alpha = 1,
 		interruptFlashDuration = 2.5,
 		dispelFlashDuration = 2.5,
 		readyCheckTimeout = 45,
@@ -299,6 +300,7 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	self.wndRaidLockFrameBtn:SetCheck(self.settings.locked)
 
 	self.wndMain:SetBGColor(("%02x000000"):format(self.settings.backgroundAlpha * 255))
+	self.wndMain:SetOpacity(self.settings.alpha, 100)
 
 	if self.settings.memberShowArrow then
 		ApolloRegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self)

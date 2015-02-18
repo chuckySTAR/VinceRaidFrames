@@ -51,6 +51,18 @@ function Options:Init(parent)
 	self.backgroundAlphaMax = 1
 	self.backgroundAlphaTick = .1
 
+	self.alphaMin = 0
+	self.alphaMax = 1
+	self.alphaTick = .1
+
+	self.rangeFilterMin = 0
+	self.rangeFilterMax = 1000
+	self.rangeFilterTick = 5
+
+	self.rangeAlphaMin = 0
+	self.rangeAlphaMax = 1
+	self.rangeAlphaTick = .1
+
 	self.memberHeightMin = 5
 	self.memberHeightMax = 100
 	self.memberHeightTick = 1
@@ -127,6 +139,20 @@ function Options:OnCategorySelect(wndHandler)
 					self.parent.wndMain:SetBGColor(("%02x000000"):format(value * 255))
 				end
 			end)
+			self.alphaSliderWidget = self:InitSliderWidget(options:FindChild("Alpha"), self.alphaMin, self.alphaMax, self.alphaTick, self.parent.settings.alpha, 2, function (value)
+				self.parent.settings.alpha = value
+				if self.parent.wndMain then
+					self.parent.wndMain:SetOpacity(value, 100)
+				end
+			end)
+			self.rangeFilterSliderWidget = self:InitSliderWidget(options:FindChild("RangeFilter"), self.rangeFilterMin, self.rangeFilterMax, self.rangeFilterTick, self.parent.settings.memberOutOfRange, 0, function (value)
+				self.parent.settings.memberOutOfRange = value
+			end)
+			self.rangeAlphaWidget = self:InitSliderWidget(options:FindChild("RangeAlpha"), self.rangeAlphaMin, self.rangeAlphaMax, self.rangeAlphaTick, self.parent.settings.memberOutOfRangeOpacity, 2, function (value)
+				self.parent.settings.memberOutOfRangeOpacity = value
+			end)
+
+
 			options:FindChild("HideInGroups"):SetCheck(self.parent.settings.hideInGroups)
 
 			options:FindChild("SortByClass"):SetData(1)
