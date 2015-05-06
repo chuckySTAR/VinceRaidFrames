@@ -97,10 +97,10 @@ end
 function Serialize(t)
 	local type = type(t)
 	if type == "string" then
-		return t:format("%q", t)
+		return ("%q"):format(t)
 	elseif type == "table" then
 		local tbl = {"{"}
-		local indexed = #tbl > 0
+		local indexed = #t > 0
 		local hasValues = false
 		for k, v in pairs(t) do
 			hasValues = true

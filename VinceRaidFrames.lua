@@ -206,6 +206,8 @@ function VinceRaidFrames:OnLoad()
 	ApolloRegisterEventHandler("CombatLogCCState", "OnCombatLogCCState", self)
 	ApolloRegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
 	ApolloRegisterEventHandler("CombatLogDispel", "OnCombatLogDispel", self)
+	
+	ApolloRegisterEventHandler("JoinResultEvent", "wtf", self)
 
 	ApolloRegisterSlashCommand("vrf", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("vinceraidframes", "OnSlashCommand", self)
@@ -213,6 +215,9 @@ function VinceRaidFrames:OnLoad()
 
 	self.timer = ApolloTimer.Create(self.settings.refreshInterval, true, "OnRefresh", self)
 	self.timer:Stop()
+	
+	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", ICCommLib.CodeEnumICCommChannelType.Group)
+	self.channel:SetReceivedMessageFunction("OnICCommMessageReceived", self)
 
 	local groupFrame = Apollo.GetAddon("GroupDisplay")
 	if groupFrame then
@@ -276,6 +281,11 @@ function VinceRaidFrames:Show()
 	end
 end
 
+function VinceRaidFrames:wtf(iccomm, eResult)
+	SendVarToRover("a", {iccomm, eResult})
+	Print("dafaq")
+end
+
 function VinceRaidFrames:OnDocLoaded_Main()
 	self.wndMain = ApolloLoadForm(self.xmlDoc, "VinceRaidFrames", "FixedHudStratum", self)
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames"})
@@ -306,9 +316,6 @@ function VinceRaidFrames:OnDocLoaded_Main()
 		ApolloRegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self)
 	end
 
-	ApolloRegisterEventHandler("ICCommReceiveThrottled", "OnICCommReceiveThrottled", self)
-
-	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", "OnICCommMessageReceived", self)
 	self:ShareAddonVersion()
 
 	self.presetsContextMenu = self.ContextMenu:new(self.xmlDoc, {
@@ -486,7 +493,7 @@ end
 
 function VinceRaidFrames:OnShareAddonVersionTimer()
 	if self.channel and self.leader then -- Todo: dont send to myself
-		self.channel:SendPrivateMessage(self.leader, {version = self.Utilities.GetAddonVersion()})
+		self.channel:SendPrivateMessage(self.leader, self.Utilities.Serialize({version = self.Utilities.GetAddonVersion()}))
 		log("Sending version to " .. self.leader)
 	end
 end
@@ -925,10 +932,7 @@ function VinceRaidFrames:IsLeader(name)
 end
 
 function VinceRaidFrames:ShareGroupLayout()
-	local names = self:GetAllMemberNames()
-	if #names > 0 then
-		self.channel:SendPrivateMessage(names, self.settings.groups)
-	end
+	self.channel:SendMessage(self.Utilities.Serialize(self.settings.groups))
 end
 
 function VinceRaidFrames:IsUniqueGroupName(name)
@@ -957,16 +961,30 @@ function VinceRaidFrames:RaidWarning(lines)
 	Event_FireGenericEvent("StoryPanelDialog_Show", GameLib.CodeEnumStoryPanel.Urgent, lines, 6)
 end
 
-function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
+function VinceRaidFrames:Decode(str)
+	if type(str) ~= "string" then
+		return nil
+	end
+	local func = loadstring("return " .. str)
+	if not func then
+		return nil
+	end
+	setfenv(func, {})
+	local success, value = pcall(func)
+	return value
+end
+
+function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
+	local message = self:Decode(strMessage)
 	if type(message) ~= "table" then
 		return
 	end
-	if type(message.rw) == "table" and #message.rw > 0 and self:IsLeader(sender) then
+	if type(message.rw) == "table" and #message.rw > 0 and self:IsLeader(idMessage) then
 		self:RaidWarning(message.rw)
 		return
 	end
 	if message.version then
-		local member = self.members[sender]
+		local member = self.members[idMessage]
 		if member then
 			member.version = message.version
 			if GroupLib.AmILeader() then
@@ -975,15 +993,9 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, message, sender)
 		end
 		return
 	end
-	if self:IsLeader(sender) and self:ValidateGroups(message) then
+	if self:IsLeader(idMessage) and self:ValidateGroups(message) then
 		self.settings.groups = message
 		self:ArrangeMembers()
-	end
-end
-
-function VinceRaidFrames:OnICCommReceiveThrottled(...)
-	if debug then
-		SendVarToRover("iccommthrottle", {...}, 0)
 	end
 end
 
@@ -1428,7 +1440,7 @@ end
 function VinceRaidFrames:OnSlashRaidWarning(cmd, arg)
 	if GroupLib.AmILeader() and self.channel then
 		ChatSystemLib.GetChannels()[ChatSystemLib.ChatChannel_Party]:Send(arg)
-		self.channel:SendMessage({rw = {arg}})
+		self.channel:SendMessage(self.Utilities.Serialize({rw = {arg}}))
 		self:RaidWarning({arg})
 	end
 end
