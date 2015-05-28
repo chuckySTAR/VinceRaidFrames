@@ -1,3 +1,5 @@
+require "ICComm"
+
 local VinceRaidFrames = {}
 
 local pairs = pairs
@@ -22,6 +24,8 @@ local GameLibGetPlayerUnit = GameLib.GetPlayerUnit
 local GameLibCodeEnumVitalInterruptArmor = GameLib.CodeEnumVital.InterruptArmor
 local GameLibGetCurrentZoneMap = GameLib.GetCurrentZoneMap
 local UnitCodeEnumDispositionFriendly = Unit.CodeEnumDisposition.Friendly
+
+local PartyChatSharingKey = "}=>"
 
 
 VinceRaidFrames.NamingMode = {
@@ -173,6 +177,7 @@ function VinceRaidFrames:OnLoad()
 	self.Options.settings = self.settings
 
 	ApolloRegisterEventHandler("InterfaceMenuListHasLoaded", "OnInterfaceMenuListHasLoaded", self)
+	ApolloRegisterEventHandler("ChatMessage", "OnChatMessage", self)
 	ApolloRegisterEventHandler("Group_Join", "OnGroup_Join", self)
 	ApolloRegisterEventHandler("Group_Left", "OnGroup_Left", self)
 	ApolloRegisterEventHandler("Group_Disbanded", "OnGroup_Disbanded", self)
@@ -206,8 +211,6 @@ function VinceRaidFrames:OnLoad()
 	ApolloRegisterEventHandler("CombatLogCCState", "OnCombatLogCCState", self)
 	ApolloRegisterEventHandler("CombatLogVitalModifier", "OnCombatLogVitalModifier", self)
 	ApolloRegisterEventHandler("CombatLogDispel", "OnCombatLogDispel", self)
-	
-	ApolloRegisterEventHandler("JoinResultEvent", "wtf", self)
 
 	ApolloRegisterSlashCommand("vrf", "OnSlashCommand", self)
 	ApolloRegisterSlashCommand("vinceraidframes", "OnSlashCommand", self)
@@ -218,6 +221,8 @@ function VinceRaidFrames:OnLoad()
 	
 	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", ICCommLib.CodeEnumICCommChannelType.Group)
 	self.channel:SetReceivedMessageFunction("OnICCommMessageReceived", self)
+	self.channel:SetSendMessageResultFunction("OnICCommSendMessageResult", self)
+	self.channel:SetThrottledFunction("OnICCommThrottled", self)
 
 	local groupFrame = Apollo.GetAddon("GroupDisplay")
 	if groupFrame then
@@ -279,11 +284,6 @@ function VinceRaidFrames:Show()
 	else
 		self:LoadXml("OnDocLoaded_Main")
 	end
-end
-
-function VinceRaidFrames:wtf(iccomm, eResult)
-	SendVarToRover("a", {iccomm, eResult})
-	Print("dafaq")
 end
 
 function VinceRaidFrames:OnDocLoaded_Main()
@@ -828,21 +828,25 @@ function VinceRaidFrames:NormalizeGroups()
 	local members = {}
 	local groupNames = {}
 	for i, group in ipairs(self.settings.groups) do
+		-- unique group names
 		if groupNames[group.name] then
 			group.name = self:GetUniqueGroupName()
 		else
 			groupNames[group.name] = true
 		end
 
+		-- remove non exisiting players and duplicates
 		for j = #group.members, 1, -1 do
-			if members[group.members[j]] then
+			local name = group.members[j]
+			if not self.members[name] or members[name] then
 				table.remove(group.members, j)
 			else
-				members[group.members[j]] = true
+				members[name] = true
 			end
 		end
 	end
 
+	-- add missing players
 	for name, member in pairs(self.members) do
 		if not members[name] then
 			tinsert(self.settings.groups[#self.settings.groups].members, name)
@@ -975,6 +979,7 @@ function VinceRaidFrames:Decode(str)
 end
 
 function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
+	log("received from " .. tostring(idMessage))
 	local message = self:Decode(strMessage)
 	if type(message) ~= "table" then
 		return
@@ -997,6 +1002,16 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
 		self.settings.groups = message
 		self:ArrangeMembers()
 	end
+end
+
+function VinceRaidFrames:OnICCommSendMessageResult(iccomm, eResult, idMessage)
+	if eResult == ICCommLib.CodeEnumICCommMessageResult.Throttled then
+		log("MESSAGE THROTTLED")
+	end
+end
+
+function VinceRaidFrames:OnICCommThrottled(iccomm, strSender, idMessage)
+	log("msg throttgled from " .. strSender .. ", msg: " .. tostring(idMessage))
 end
 
 function VinceRaidFrames:OnVarChange_FrameCount()
@@ -1210,12 +1225,78 @@ function VinceRaidFrames:UpdateRoleButtons()
 	end
 end
 
+function VinceRaidFrames:MapMemberNamesToId()
+	local memberNames = {}
+	local memberNameToId = {}
+	for name, member in pairs(self.members) do
+		tinsert(memberNames, name)
+	end
+	-- Sorted member names for short unique ids across clients!
+	table.sort(memberNames)
+	for i, name in ipairs(memberNames) do
+		memberNameToId[name] = i
+	end
+	return memberNameToId, memberNames
+end
+
+function VinceRaidFrames:ImportGroupLayoutFromPartyChat(str)
+	local tbl = self:Decode(str)
+	if not tbl or type(tbl) ~= "table" or #tbl == 0 then
+		return
+	end
+	self.settings.groups = {}
+	local memberNameToId, idToMemberName = self:MapMemberNamesToId()
+	local currentGroupIndex = 0
+	
+	for i, val in ipairs(tbl) do
+		if type(val) == "string" then
+			tinsert(self.settings.groups, {
+				name = val,
+				members = {}
+			})
+			currentGroupIndex = currentGroupIndex + 1
+		elseif type(val) == "number" and currentGroupIndex > 0 then
+			tinsert(self.settings.groups[currentGroupIndex].members, idToMemberName[val])
+		end
+	end
+	self:ArrangeMembers()
+end
+
+function VinceRaidFrames:OnChatMessage(channelSource, tMessageInfo)
+	if channelSource:GetType() ~= ChatSystemLib.ChatChannel_Party then
+		return
+	end
+	if not self:IsLeader(tMessageInfo.strSender) then
+		return
+	end
+	local player = GameLibGetPlayerUnit()
+	if player and player:GetName() == tMessageInfo.strSender then
+		return
+	end
+	local msg = {}
+	for i, segment in ipairs(tMessageInfo.arMessageSegments) do
+		tinsert(msg, segment.strText)
+	end
+	local strMsg = table.concat(msg, "")
+	if strMsg:sub(0, PartyChatSharingKey:len()) ~= PartyChatSharingKey then
+		return
+	end
+	self:ImportGroupLayoutFromPartyChat(strMsg:sub(PartyChatSharingKey:len() + 1))
+end
+
 function VinceRaidFrames:OnPostGroupSetup(wndHandler, wndControl)
 	local party = ChatSystemLib.GetChannels()[ChatSystemLib.ChatChannel_Party]
+	local str = {}
+	local memberNameToId = self:MapMemberNamesToId()
+	
 	for i, group in ipairs(self.settings.groups) do
-		party:Send(group.name .. ":")
-		party:Send(table.concat(group.members, ", "))
+		tinsert(str, group.name)
+		for j, name in ipairs(group.members) do
+			tinsert(str, memberNameToId[name])
+		end
 	end
+	
+	party:Send(PartyChatSharingKey .. self.Utilities.Serialize(str))
 end
 
 function VinceRaidFrames:OnConfigSetAsDPSToggle(wndHandler, wndControl)
