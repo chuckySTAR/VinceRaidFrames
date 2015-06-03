@@ -57,15 +57,15 @@ debug = true
 --@end-debug@
 
 
-local function log(str)
+local function log(val)
 	if debug then
 		if not VRFDebug then
 			_G.VRFDebug = {}
 		end
-		tinsert(VRFDebug, str)
-		Print(tostring(str))
+		tinsert(VRFDebug, val)
+		Print("[VRF] : " .. tostring(val))
 		if SendVarToRover then
-			SendVarToRover("VRF Log", str, 0)
+			SendVarToRover("VRF Log", val, 0)
 		end
 	end
 end
@@ -219,19 +219,16 @@ function VinceRaidFrames:OnLoad()
 	self.timer = ApolloTimer.Create(self.settings.refreshInterval, true, "OnRefresh", self)
 	self.timer:Stop()
 	
-	self.channel = ICCommLib.JoinChannel("VinceRaidFrames", ICCommLib.CodeEnumICCommChannelType.Group)
-	self.channel:SetReceivedMessageFunction("OnICCommMessageReceived", self)
-	self.channel:SetSendMessageResultFunction("OnICCommSendMessageResult", self)
-	self.channel:SetThrottledFunction("OnICCommThrottled", self)
+	self:JoinICCommChannel()
 
-	local groupFrame = Apollo.GetAddon("GroupDisplay")
-	if groupFrame then
-		local hook = groupFrame.OnGroupMemberFlags
-		groupFrame.OnGroupMemberFlags = function(groupDisplay, nMemberIndex, bIsFromPromotion, tChangedFlags)
-			tChangedFlags.bReady = false
-			hook(groupDisplay, nMemberIndex, bIsFromPromotion, tChangedFlags)
-		end
-	end
+	-- local groupFrame = Apollo.GetAddon("GroupDisplay")
+	-- if groupFrame then
+		-- local hook = groupFrame.OnGroupMemberFlags
+		-- groupFrame.OnGroupMemberFlags = function(groupDisplay, nMemberIndex, bIsFromPromotion, tChangedFlags)
+			-- tChangedFlags.bReady = false
+			-- hook(groupDisplay, nMemberIndex, bIsFromPromotion, tChangedFlags)
+		-- end
+	-- end
 
 	local playerUnit = GameLibGetPlayerUnit()
 	if playerUnit then
@@ -249,6 +246,32 @@ end
 
 function VinceRaidFrames:OnInterfaceMenuListHasLoaded()
 	Event_FireGenericEvent("InterfaceMenuList_NewAddOn", "Vince Raid Frames", {"ToggleVinceRaidFrames", "", "IconSprites:Icon_Windows_UI_CRB_Rival"})
+
+	-- OneVersion
+	local args = {"OneVersion_ReportAddonInfo", "VinceRaidFrames"}
+	for n in self.Utilities.GetAddonVersion():gmatch("%d+") do
+		tinsert(args, n)
+	end
+	Event_FireGenericEvent(unpack(args))
+end
+
+function VinceRaidFrames:JoinICCommChannel()
+	self.timerJoinICCommChannel = nil
+	
+	self.channel = ICCommLib.JoinChannel("VinceRF", ICCommLib.CodeEnumICCommChannelType.Group)
+	self.channel:SetJoinResultFunction("OnICCommJoin", self)
+	
+	-- this. fucking. game.
+	if not self.channel:IsReady() then
+		log("channel not ready")
+		self.timerJoinICCommChannel = ApolloTimer.Create(3, false, "JoinICCommChannel", self)
+	else
+		log("channel ready")
+		
+		self.channel:SetReceivedMessageFunction("OnICCommMessageReceived", self)
+		self.channel:SetSendMessageResultFunction("OnICCommSendMessageResult", self)
+		self.channel:SetThrottledFunction("OnICCommThrottled", self)
+	end
 end
 
 function VinceRaidFrames:SetPlayerView()
@@ -935,8 +958,22 @@ function VinceRaidFrames:IsLeader(name)
 	return self.leader == name
 end
 
+function VinceRaidFrames:GetGroupLayout()
+	local layout = {}
+	local memberNameToId = self:MapMemberNamesToId()
+	
+	for i, group in ipairs(self.settings.groups) do
+		tinsert(layout, group.name)
+		for j, name in ipairs(group.members) do
+			tinsert(layout, memberNameToId[name])
+		end
+	end
+end
+
 function VinceRaidFrames:ShareGroupLayout()
-	self.channel:SendMessage(self.Utilities.Serialize(self.settings.groups))
+	self.channel:SendMessage(self.Utilities.Serialize({
+		layout = self:GetGroupLayout()
+	}))
 end
 
 function VinceRaidFrames:IsUniqueGroupName(name)
@@ -978,6 +1015,10 @@ function VinceRaidFrames:Decode(str)
 	return value
 end
 
+function VinceRaidFrames:OnICCommJoin(channel, eResult)
+	log("JoinResult: " .. (self.Utilities.GetKeyByValue(ICCommLib.CodeEnumICCommJoinResult, eResult) or tostring(eResult)))
+end
+
 function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
 	log("received from " .. tostring(idMessage))
 	local message = self:Decode(strMessage)
@@ -998,9 +1039,8 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
 		end
 		return
 	end
-	if self:IsLeader(idMessage) and self:ValidateGroups(message) then
-		self.settings.groups = message
-		self:ArrangeMembers()
+	if self:IsLeader(idMessage) and message.layout then
+		self:ImportGroupLayout(message.layout)
 	end
 end
 
@@ -1239,8 +1279,7 @@ function VinceRaidFrames:MapMemberNamesToId()
 	return memberNameToId, memberNames
 end
 
-function VinceRaidFrames:ImportGroupLayoutFromPartyChat(str)
-	local tbl = self:Decode(str)
+function VinceRaidFrames:ImportGroupLayout(tbl)
 	if not tbl or type(tbl) ~= "table" or #tbl == 0 then
 		return
 	end
@@ -1281,22 +1320,11 @@ function VinceRaidFrames:OnChatMessage(channelSource, tMessageInfo)
 	if strMsg:sub(0, PartyChatSharingKey:len()) ~= PartyChatSharingKey then
 		return
 	end
-	self:ImportGroupLayoutFromPartyChat(strMsg:sub(PartyChatSharingKey:len() + 1))
+	self:ImportGroupLayout(self:Decode(strMsg:sub(PartyChatSharingKey:len() + 1)))
 end
 
 function VinceRaidFrames:OnPostGroupSetup(wndHandler, wndControl)
-	local party = ChatSystemLib.GetChannels()[ChatSystemLib.ChatChannel_Party]
-	local str = {}
-	local memberNameToId = self:MapMemberNamesToId()
-	
-	for i, group in ipairs(self.settings.groups) do
-		tinsert(str, group.name)
-		for j, name in ipairs(group.members) do
-			tinsert(str, memberNameToId[name])
-		end
-	end
-	
-	party:Send(PartyChatSharingKey .. self.Utilities.Serialize(str))
+	ChatSystemLib.GetChannels()[ChatSystemLib.ChatChannel_Party]:Send(PartyChatSharingKey .. self.Utilities.Serialize(self:GetGroupLayout()))
 end
 
 function VinceRaidFrames:OnConfigSetAsDPSToggle(wndHandler, wndControl)

@@ -150,4 +150,12 @@ function Extend(...)
 	return args[1]
 end
 
+function GetKeyByValue(tbl, val)
+	for k, v in pairs(tbl) do
+		if v == val then
+			return k
+		end
+	end
+end
+
 VinceRaidFrames.Utilities = Utilities
