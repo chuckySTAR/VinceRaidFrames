@@ -156,7 +156,8 @@ function VinceRaidFrames:new(o)
 		readyCheckTimeout = 45,
 		locked = false,
 		hideInGroups = false,
-		namingMode = VinceRaidFrames.NamingMode.Shorten
+		namingMode = VinceRaidFrames.NamingMode.Shorten,
+		tanksHealsDpsLayout = true -- received a group layout from raid lead in this session? no? then special Tanks/Heals/Dps groups are used
 	}
 	return o
 end
@@ -383,6 +384,8 @@ function VinceRaidFrames:OnDocLoaded_Main()
 							return
 						end
 
+						self.settings.tanksHealsDpsLayout = false
+
 						local tmp = self.settings.groups[value]
 						self.settings.groups[value] = self.settings.groups[value - 1]
 						self.settings.groups[value - 1] = tmp
@@ -400,6 +403,8 @@ function VinceRaidFrames:OnDocLoaded_Main()
 							return
 						end
 
+						self.settings.tanksHealsDpsLayout = false
+
 						local tmp = self.settings.groups[value]
 						self.settings.groups[value] = self.settings.groups[value + 1]
 						self.settings.groups[value + 1] = tmp
@@ -412,6 +417,8 @@ function VinceRaidFrames:OnDocLoaded_Main()
 			tinsert(buttons, {
 				label = "New Group",
 				OnClick = function (value)
+					self.settings.tanksHealsDpsLayout = false
+
 					local group = {
 						name = self:GetUniqueGroupName(),
 						members = {}
@@ -436,6 +443,8 @@ function VinceRaidFrames:OnDocLoaded_Main()
 						if #self.settings.groups <= 1 then
 							return
 						end
+
+						self.settings.tanksHealsDpsLayout = false
 
 						local index = value == #self.settings.groups and value - 1 or #self.settings.groups
 						local newGroup = self.settings.groups[index].members
@@ -587,11 +596,11 @@ function VinceRaidFrames:OnRefresh()
 		if groupMember and groupMember.bIsLeader then
 			-- leader changed?
 			if self.leader ~= "" and self.leader ~= groupMember.strCharacterName then
-				-- close options window to update states
-				--				if self.wndRaidConfigureBtn:IsChecked() then
-				--					self.wndRaidConfigureBtn:SetCheck(false)
-				--					self.wndRaidConfigureBtn:SetCheck(true)
-				--				end
+-- 				close options window to update states
+--				if self.wndRaidConfigureBtn:IsChecked() then
+--					self.wndRaidConfigureBtn:SetCheck(false)
+--					self.wndRaidConfigureBtn:SetCheck(true)
+--				end
 			end
 			self.leader = groupMember.strCharacterName
 		end
@@ -878,6 +887,8 @@ function VinceRaidFrames:NormalizeGroups()
 end
 
 function VinceRaidFrames:MoveMemberToGroup(memberName, groupName)
+	self.settings.tanksHealsDpsLayout = false
+
 	self:RemoveMemberFromGroup(memberName)
 	self:AddMemberToGroup(memberName, groupName)
 	self:ArrangeMembers()
@@ -906,36 +917,36 @@ function VinceRaidFrames:RemoveMemberFromGroup(memberName)
 	end
 end
 
-function VinceRaidFrames:CreateDefaultGroups()
-	self.settings.groups = {
-		{
-			name = "Raid",
-			members = {}
-		}
-	}
-	for name, member in pairs(self.members) do
-		tinsert(self.settings.groups[1].members, name)
-	end
-end
-
 --function VinceRaidFrames:CreateDefaultGroups()
---	local tanks = {
---		name = "Tanks",
---		members = {}
+--	self.settings.groups = {
+--		{
+--			name = "Raid",
+--			members = {}
+--		}
 --	}
---	local healers = {
---		name = "Healers",
---		members = {}
---	}
---	local dps = {
---		name = "DPS",
---		members = {}
---	}
---	self.settings.groups = {tanks, healers, dps}
 --	for name, member in pairs(self.members) do
---		tinsert(member.groupMember.bTank and tanks.members or (member.groupMember.bHealer and healers.members or dps.members), name)
+--		tinsert(self.settings.groups[1].members, name)
 --	end
 --end
+
+function VinceRaidFrames:CreateDefaultGroups()
+	local tanks = {
+		name = "Tanks",
+		members = {}
+	}
+	local healers = {
+		name = "Healers",
+		members = {}
+	}
+	local dps = {
+		name = "DPS",
+		members = {}
+	}
+	self.settings.groups = {tanks, healers, dps}
+	for name, member in pairs(self.members) do
+		tinsert(member.groupMember.bTank and tanks.members or (member.groupMember.bHealer and healers.members or dps.members), name)
+	end
+end
 
 function VinceRaidFrames:ValidateGroups(groups)
 	if type(groups) ~= "table" or #groups < 1 then
@@ -1039,8 +1050,14 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
 		end
 		return
 	end
-	if self:IsLeader(idMessage) and message.layout then
-		self:ImportGroupLayout(message.layout)
+	if self:IsLeader(idMessage) then
+		if message.layout then
+			self:ImportGroupLayout(message.layout)
+		elseif message.defaultGroups then
+			self.settings.tanksHealsDpsLayout = true
+			self:CreateDefaultGroups()
+			self:ArrangeMembers()
+		end
 	end
 end
 
@@ -1106,6 +1123,8 @@ function VinceRaidFrames:OnGroupNameEditBoxClose(wndHandler, wndControl, strText
 end
 function VinceRaidFrames:OnGroupNameEditBoxReturn(wndHandler, wndControl, strText)
 	if wndHandler:GetData().name == strText or self:IsUniqueGroupName(strText) then
+		self.settings.tanksHealsDpsLayout = false
+
 		wndHandler:Show(false, true)
 		wndHandler:GetParent():FindChild("Name"):Show(true, true)
 		wndHandler:GetData().name = strText
@@ -1283,6 +1302,7 @@ function VinceRaidFrames:ImportGroupLayout(tbl)
 	if not tbl or type(tbl) ~= "table" or #tbl == 0 then
 		return
 	end
+	self.settings.tanksHealsDpsLayout = false
 	self.settings.groups = {}
 	local memberNameToId, idToMemberName = self:MapMemberNamesToId()
 	local currentGroupIndex = 0
@@ -1325,6 +1345,15 @@ end
 
 function VinceRaidFrames:OnPostGroupSetup(wndHandler, wndControl)
 	ChatSystemLib.GetChannels()[ChatSystemLib.ChatChannel_Party]:Send(PartyChatSharingKey .. self.Utilities.Serialize(self:GetGroupLayout()))
+end
+
+function VinceRaidFrames:OnResetGroupLayout(wndHandler, wndControl)
+	self.settings.tanksHealsDpsLayout = true
+	self:CreateDefaultGroups()
+	self.channel:SendMessage(self.Utilities.Serialize({
+		defaultGroups = true
+	}))
+	self:ArrangeMembers()
 end
 
 function VinceRaidFrames:OnConfigSetAsDPSToggle(wndHandler, wndControl)
@@ -1475,8 +1504,20 @@ function VinceRaidFrames:OnGroup_Add(name) -- someone joins
 	-- Group_Add sometimes triggers before Group_Join?!?! idk better initialize self.settings.groups
 	if not self.settings.groups then
 		self:CreateDefaultGroups()
-	else
+	elseif not self.settings.tanksHealsDpsLayout then
 		tinsert(self.settings.groups[#self.settings.groups].members, name)
+	else
+		-- find new member and add him to the right group
+		local count = GroupLibGetMemberCount()
+		for i = 1, count do
+			local groupMember = GroupLibGetGroupMember(i)
+			local name2 = groupMember and groupMember.strCharacterName
+
+			if name == name2 then
+				tinsert(groupMember.bTank and self.settings.groups[1].members or (groupMember.bHealer and self.settings.groups[2].members or self.settings.groups[3].members), name)
+				break
+			end
+		end
 	end
 
 	self:BuildMembers()
@@ -1488,6 +1529,7 @@ function VinceRaidFrames:OnGroup_Remove(name) -- someone leaves
 end
 
 function VinceRaidFrames:OnGroup_Join() -- player joins
+	self.settings.tanksHealsDpsLayout = true
 	if not GroupLib.AmILeader() then
 		self.settings.groups = nil
 	end
@@ -1495,6 +1537,7 @@ function VinceRaidFrames:OnGroup_Join() -- player joins
 end
 
 function VinceRaidFrames:OnGroup_Left() -- player leaves
+	self.settings.tanksHealsDpsLayout = true
 	self.settings.groups = nil
 	self:Show()
 end
