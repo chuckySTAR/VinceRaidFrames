@@ -219,8 +219,8 @@ function VinceRaidFrames:OnLoad()
 
 	self.timer = ApolloTimer.Create(self.settings.refreshInterval, true, "OnRefresh", self)
 	self.timer:Stop()
-	
-	self:JoinICCommChannel()
+
+	self.timerJoinICCommChannel = ApolloTimer.Create(5, false, "JoinICCommChannel", self)
 
 	-- local groupFrame = Apollo.GetAddon("GroupDisplay")
 	-- if groupFrame then
@@ -268,10 +268,12 @@ function VinceRaidFrames:JoinICCommChannel()
 		self.timerJoinICCommChannel = ApolloTimer.Create(3, false, "JoinICCommChannel", self)
 	else
 		log("channel ready")
-		
+
 		self.channel:SetReceivedMessageFunction("OnICCommMessageReceived", self)
 		self.channel:SetSendMessageResultFunction("OnICCommSendMessageResult", self)
 		self.channel:SetThrottledFunction("OnICCommThrottled", self)
+
+		self:ShareAddonVersion()
 	end
 end
 
@@ -339,8 +341,6 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	if self.settings.memberShowArrow then
 		ApolloRegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self)
 	end
-
-	self:ShareAddonVersion()
 
 	self.presetsContextMenu = self.ContextMenu:new(self.xmlDoc, {
 		type = "CRUD",

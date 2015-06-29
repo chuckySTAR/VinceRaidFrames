@@ -158,4 +158,37 @@ function GetKeyByValue(tbl, val)
 	end
 end
 
+function ParseStrings(str)
+	local strings = {}
+	local position = 0
+	while true do
+		local start = position + 1
+		start = str:find("%S", position)
+		if not start then
+			break
+		end
+		local char = str:sub(start, start)
+		if char == "\"" or char == "'" then
+			start = start + 1
+			position = str:find(char, start)
+--			while true do
+--				if position then
+--					if str:sub(position - 1, position - 1) == "\\" then
+--						position = str:find(char, position + 1)
+--					else
+--						break
+--					end
+--				else
+--					break
+--				end
+--			end
+		else
+			position = str:find("%s", start + 1)
+		end
+		position = position and position or #str + 1
+		tinsert(strings, str:sub(start, position - 1))
+	end
+	return unpack(strings)
+end
+
 VinceRaidFrames.Utilities = Utilities
