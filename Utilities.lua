@@ -188,7 +188,7 @@ function ParseStrings(str)
 		position = position and position or #str + 1
 		tinsert(strings, str:sub(start, position - 1))
 	end
-	return unpack(strings)
+	return strings
 end
 
 VinceRaidFrames.Utilities = Utilities

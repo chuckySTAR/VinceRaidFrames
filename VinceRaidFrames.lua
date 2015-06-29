@@ -887,8 +887,6 @@ function VinceRaidFrames:NormalizeGroups()
 end
 
 function VinceRaidFrames:MoveMemberToGroup(memberName, groupName)
-	self.settings.tanksHealsDpsLayout = false
-
 	self:RemoveMemberFromGroup(memberName)
 	self:AddMemberToGroup(memberName, groupName)
 	self:ArrangeMembers()
@@ -1107,6 +1105,7 @@ function VinceRaidFrames:OnGroupMouseBtnUp(wndHandler, wndControl, eMouseButton)
 end
 
 function VinceRaidFrames:OnDragDrop(wndHandler, wndControl, nX, nY, wndSource, strType, iData)
+	self.settings.tanksHealsDpsLayout = false
 	self:MoveMemberToGroup(wndSource:GetData().name, wndHandler:GetData())
 	self:ShareGroupLayout()
 end
@@ -1489,8 +1488,8 @@ function VinceRaidFrames:OnGroup_FlagsChanged(...)
 end
 
 function VinceRaidFrames:OnGroup_MemberFlagsChanged(memberId, wat, flags)
-	if type(flags) == "table" and (flags.bTank or flags.bHealer or flags.bDPS) then
-		self:Show()
+	if self.settings.tanksHealsDpsLayout and type(flags) == "table" and (flags.bTank or flags.bHealer or flags.bDPS) then
+		self:MoveMemberToGroup(GroupLibGetGroupMember(memberId).strCharacterName, flags.bTank and "Tanks" or (flags.bHealer and "Healers" or "DPS"))
 	end
 --	self:UpdateRoleButtons()
 end
