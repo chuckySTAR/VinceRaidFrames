@@ -133,7 +133,7 @@ function VinceRaidFrames:new(o)
 		memberAbsorbHeight = 1,
 		memberShieldWidth = 16,
 		memberAbsorbWidth = 16,
-		memberColumns = 2,
+		memberColumns = 3,
 		memberBuffIconsOutOfFight = false,
 		memberShowShieldBar = true,
 		memberShowAbsorbBar = true,
@@ -157,7 +157,8 @@ function VinceRaidFrames:new(o)
 		locked = false,
 		hideInGroups = false,
 		namingMode = VinceRaidFrames.NamingMode.Shorten,
-		tanksHealsDpsLayout = true -- received a group layout from raid lead in this session? no? then special Tanks/Heals/Dps groups are used
+		tanksHealsDpsLayout = true, -- received a group layout from raid lead in this session? no? then special Tanks/Heals/Dps groups are used
+		sortVertical = true -- sort members from left to right or from top to bottom
 	}
 	return o
 end
@@ -797,13 +798,19 @@ function VinceRaidFrames:ArrangeMembers()
 				member:Hide()
 			end
 		else
+			local columnSizeVertical = ceil(#groupFrame.members / self.settings.memberColumns)
 			for j, member in ipairs(groupFrame.members) do
-				local row = floor((j - 1) / self.settings.memberColumns)
-				local left = ((j - 1) % self.settings.memberColumns) * member:GetWidth()
+				if self.settings.sortVertical then
+					local column = floor((j - 1) / columnSizeVertical)
+					local left = column * member:GetWidth()
+					member.frame:SetAnchorOffsets(left, accHeight + ((j - 1) % columnSizeVertical) * member:GetHeight(), left + member:GetWidth(), accHeight + (((j - 1) % columnSizeVertical) + 1) * member:GetHeight())
+				else
+					local row = floor((j - 1) / self.settings.memberColumns)
+					local left = ((j - 1) % self.settings.memberColumns) * member:GetWidth()
+					member.frame:SetAnchorOffsets(left, accHeight + row * member:GetHeight(), left + member:GetWidth(), accHeight + (row + 1) * member:GetHeight())
+				end
 				member:Show()
-				member.frame:SetAnchorOffsets(left, accHeight + row * member:GetHeight(), left + member:GetWidth(), accHeight + (row + 1) * member:GetHeight())
 			end
-
 			if #groupFrame.members > 0 then
 				accHeight = accHeight + ceil(#groupFrame.members / self.settings.memberColumns) * groupFrame.members[1]:GetHeight()
 			end
@@ -970,13 +977,13 @@ end
 function VinceRaidFrames:GetGroupLayout()
 	local layout = {}
 	local memberNameToId = self:MapMemberNamesToId()
-	
 	for i, group in ipairs(self.settings.groups) do
 		tinsert(layout, group.name)
 		for j, name in ipairs(group.members) do
 			tinsert(layout, memberNameToId[name])
 		end
 	end
+	return layout
 end
 
 function VinceRaidFrames:ShareGroupLayout()
@@ -1042,7 +1049,7 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
 		local member = self.members[idMessage]
 		if member then
 			member.version = message.version
-			if GroupLib.AmILeader() then
+			if GroupLib.AmILeader() and not self.settings.tanksHealsDpsLayout then
 				self:ShareGroupLayout()
 			end
 		end
@@ -1243,6 +1250,10 @@ end
 function VinceRaidFrames:OnRaidMasterLootToggle(wndHandler, wndControl) -- RaidMasterLootBtn
 	Event_FireGenericEvent("GenericEvent_Raid_ToggleMasterLoot", wndHandler:IsChecked())
 	Event_FireGenericEvent("GenericEvent_Raid_ToggleLeaderOptions", false)
+end
+
+function VinceRaidFrames:OnOpenOptions()
+	self.Options:Toggle(self.xmlDoc)
 end
 
 function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidConfigureBtn
@@ -1489,7 +1500,8 @@ end
 
 function VinceRaidFrames:OnGroup_MemberFlagsChanged(memberId, wat, flags)
 	if self.settings.tanksHealsDpsLayout and type(flags) == "table" and (flags.bTank or flags.bHealer or flags.bDPS) then
-		self:MoveMemberToGroup(GroupLibGetGroupMember(memberId).strCharacterName, flags.bTank and "Tanks" or (flags.bHealer and "Healers" or "DPS"))
+		local groupMember = GroupLibGetGroupMember(memberId)
+		self:MoveMemberToGroup(groupMember.strCharacterName, groupMember.bTank and "Tanks" or (groupMember.bHealer and "Healers" or "DPS"))
 	end
 --	self:UpdateRoleButtons()
 end

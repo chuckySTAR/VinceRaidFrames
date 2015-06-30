@@ -154,6 +154,7 @@ function Options:OnCategorySelect(wndHandler)
 
 
 			options:FindChild("HideInGroups"):SetCheck(self.parent.settings.hideInGroups)
+			options:FindChild("SortVertical"):SetCheck(self.parent.settings.sortVertical)
 
 			options:FindChild("SortByClass"):SetData(1)
 			options:FindChild("SortByRole"):SetData(2)
@@ -467,6 +468,11 @@ end
 function Options:OnHideInGroups(wndHandler, wndControl)
 	self.parent.settings.hideInGroups = wndControl:IsChecked()
 	self.parent:Show()
+end
+
+function Options:OnSortVertical(wndHandler, wndControl)
+	self.parent.settings.sortVertical = wndControl:IsChecked()
+	self.parent:ArrangeMembers()
 end
 
 function Options:ToggleShieldWidthHeight()

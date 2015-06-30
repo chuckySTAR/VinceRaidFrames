@@ -168,25 +168,27 @@ function ParseStrings(str)
 			break
 		end
 		local char = str:sub(start, start)
-		if char == "\"" or char == "'" then
+		local quotes = char == "\"" or char == "'"
+		if quotes then
 			start = start + 1
 			position = str:find(char, start)
---			while true do
---				if position then
---					if str:sub(position - 1, position - 1) == "\\" then
---						position = str:find(char, position + 1)
---					else
---						break
---					end
---				else
---					break
---				end
---			end
+			while true do
+				if position then
+					if str:sub(position - 1, position - 1) == "\\" then
+						position = str:find(char, position + 1)
+					else
+						break
+					end
+				else
+					break
+				end
+			end
 		else
 			position = str:find("%s", start + 1)
 		end
 		position = position and position or #str + 1
-		tinsert(strings, str:sub(start, position - 1))
+		local sub = str:sub(start, position - 1)
+		tinsert(strings, quotes and sub:gsub("\\" .. char, char) or sub)
 	end
 	return strings
 end
