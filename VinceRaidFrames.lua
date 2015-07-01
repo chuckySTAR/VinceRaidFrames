@@ -85,7 +85,7 @@ function VinceRaidFrames:new(o)
 	o.mobsInCombat = {}
 	o.groupFrames = {}
 	o.indexToMember = {}
-	o.leader = ""
+	o.leader = nil
 	o.editMode = false -- dragndrop of members
 	o.addonVersionAnnounceTimer = nil
 	o.inCombat = false
@@ -158,7 +158,8 @@ function VinceRaidFrames:new(o)
 		hideInGroups = false,
 		namingMode = VinceRaidFrames.NamingMode.Shorten,
 		tanksHealsDpsLayout = true, -- received a group layout from raid lead in this session? no? then special Tanks/Heals/Dps groups are used
-		sortVertical = true -- sort members from left to right or from top to bottom
+		sortVertical = true, -- sort members from left to right or from top to bottom
+		hideCarbinesGroupDisplay = true
 	}
 	return o
 end
@@ -343,6 +344,9 @@ function VinceRaidFrames:OnDocLoaded_Main()
 		ApolloRegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self)
 	end
 
+	self:HookGroupDisplay(self.settings.hideCarbinesGroupDisplay)
+
+
 	self.presetsContextMenu = self.ContextMenu:new(self.xmlDoc, {
 		type = "CRUD",
 		model = self.settings.presets,
@@ -520,12 +524,30 @@ function VinceRaidFrames:OnConfigure()
 end
 
 
+
+function VinceRaidFrames:HookGroupDisplay(value)
+	local groupDisplay = Apollo.GetAddon("GroupDisplay")
+	if value then
+		Event_FireGenericEvent("GenericEvent_InitializeGroupLeaderOptions", self.wndMain:FindChild("GroupControlsBtn")) -- race condition? <3 carbine
+		if groupDisplay then
+			self.hookGroupDisplayOnUpdateTimer = groupDisplay.OnUpdateTimer
+			groupDisplay.OnUpdateTimer = function() end
+		end
+	else
+		if groupDisplay and self.hookGroupDisplayOnUpdateTimer then
+			Event_FireGenericEvent("GenericEvent_InitializeGroupLeaderOptions", groupDisplay.wndGroupHud:FindChild("GroupControlsBtn"))
+			groupDisplay.OnUpdateTimer = self.hookGroupDisplayOnUpdateTimer
+			self.hookGroupDisplayOnUpdateTimer = nil
+		end
+	end
+end
+
 function VinceRaidFrames:ShareAddonVersion()
 	self.addonVersionAnnounceTimer = ApolloTimer.Create(2, false, "OnShareAddonVersionTimer", self)
 end
 
 function VinceRaidFrames:OnShareAddonVersionTimer()
-	if self.channel and self.leader then -- Todo: dont send to myself
+	if self.channel and self.leader and self.player and not self:IsLeader(self.player:GetName()) then
 		self.channel:SendPrivateMessage(self.leader, self.Utilities.Serialize({version = self.Utilities.GetAddonVersion()}))
 		log("Sending version to " .. self.leader)
 	end
@@ -541,6 +563,10 @@ function VinceRaidFrames:GetAllMemberNames()
 		end
 	end
 	return names
+end
+
+function VinceRaidFrames:OnGroupControlsCheck()
+	Event_FireGenericEvent("GenericEvent_UpdateGroupLeaderOptions")
 end
 
 function VinceRaidFrames:OnGroup_ReadyCheck(index, message)
@@ -596,20 +622,20 @@ function VinceRaidFrames:OnRefresh()
 		end
 		if groupMember and groupMember.bIsLeader then
 			-- leader changed?
-			if self.leader ~= "" and self.leader ~= groupMember.strCharacterName then
+--			if self.leader ~= "" and self.leader ~= groupMember.strCharacterName then
 -- 				close options window to update states
 --				if self.wndRaidConfigureBtn:IsChecked() then
 --					self.wndRaidConfigureBtn:SetCheck(false)
 --					self.wndRaidConfigureBtn:SetCheck(true)
 --				end
-			end
+--			end
 			self.leader = groupMember.strCharacterName
 		end
 	end
 
 	self:UpdateGroupButtons()
 	self:RefreshAggroIndicators()
-	self:UpdateSyncToGroup()
+	self:UpdateGroupControlsBtn()
 end
 
 function VinceRaidFrames:UpdateGroupButtons()
@@ -1230,6 +1256,10 @@ function VinceRaidFrames:OnGroupWrongInstance()
 	GroupLib.GotoGroupInstance()
 end
 
+function VinceRaidFrames:UpdateGroupControlsBtn()
+	self.wndMain:FindChild("GroupControlsBtn"):Show(self.hookGroupDisplayOnUpdateTimer and GroupLib.InGroup())
+end
+
 function VinceRaidFrames:UpdateSyncToGroup()
 	self.wndMain:FindChild("GroupWrongInstance"):Show(GroupLib.CanGotoGroupInstance())
 end
@@ -1263,6 +1293,7 @@ function VinceRaidFrames:OnRaidConfigureToggle(wndHandler, wndControl) -- RaidCo
 		Event_FireGenericEvent("GenericEvent_Raid_ToggleLeaderOptions", false)
 
 		self:UpdateRoleButtons()
+		self:UpdateSyncToGroup()
 
 		local leader = GroupLib.AmILeader()
 		self.editMode = leader
@@ -1507,7 +1538,6 @@ function VinceRaidFrames:OnGroup_MemberFlagsChanged(memberId, wat, flags)
 end
 
 function VinceRaidFrames:OnGroup_MemberOrderChanged()
-	self:OnRefresh()
 	self:ArrangeMembers()
 end
 

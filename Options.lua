@@ -154,6 +154,7 @@ function Options:OnCategorySelect(wndHandler)
 
 
 			options:FindChild("HideInGroups"):SetCheck(self.parent.settings.hideInGroups)
+			options:FindChild("HideCarbinesGroupDisplay"):SetCheck(self.parent.settings.hideCarbinesGroupDisplay)
 			options:FindChild("SortVertical"):SetCheck(self.parent.settings.sortVertical)
 
 			options:FindChild("SortByClass"):SetData(1)
@@ -388,8 +389,55 @@ function Options:OnCategorySelect(wndHandler)
 
 			self:FillCustomNamesGrid()
 		elseif categoryName == "Indicators" then
+--			local indicators = {
+--				"Health Bar",
+--				"Health Text",
+--				"Shield Bar",
+--				"Shield Text",
+--				"Absorb Bar",
+--				"Absorb Text",
+--				"Mana Bar",
+--				"Mana Text",
+--				"Name",
+--				"Offline",
+--				"Death",
+--				"Aggro",
+--				"Arrow",
+--				"Auras",
+--				"Interrupt",
+--				"Interrupt Armor",
+--				"Cleanse",
+--				"Range",
+--				"Class",
+--				"Role",
+--				"Path"
+--			}
+			local indicators = {
+				"Health",
+				"Shield",
+				"Absorb",
+				"Mana",
+				"Name",
+				"Offline",
+				"Death",
+				"Aggro",
+				"Arrow",
+				"Auras",
+				"Interrupt",
+				"Interrupt Armor",
+				"Cleanse",
+				"Range",
+				"Class",
+				"Role",
+				"Path",
+				"Avatar"
+			}
 			local grid = options:FindChild("IndicatorsGrid")
-
+			grid:DeleteAll()
+			for i, indicator in ipairs(indicators) do
+				local row = grid:AddRow(indicator)
+			end
+			grid:SetSortColumn(1, true)
 		end
 	end
 end
@@ -463,6 +511,11 @@ function Options:OnNewCustomName()
 	customNameInput:ClearFocus()
 	self:FillCustomNamesGrid()
 	self.parent:RenameMembers()
+end
+
+function Options:OnHideCarbinesGroupDisplay(wndHandler, wndControl)
+	self.parent.settings.hideCarbinesGroupDisplay = wndControl:IsChecked()
+	self.parent:HookGroupDisplay(self.parent.settings.hideCarbinesGroupDisplay)
 end
 
 function Options:OnHideInGroups(wndHandler, wndControl)
