@@ -430,7 +430,8 @@ function Options:OnCategorySelect(wndHandler)
 				"Class",
 				"Role",
 				"Path",
-				"Avatar"
+				"Avatar",
+				"Ready"
 			}
 			local grid = options:FindChild("IndicatorsGrid")
 			grid:DeleteAll()

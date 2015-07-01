@@ -266,10 +266,10 @@ function VinceRaidFrames:JoinICCommChannel()
 	
 	-- this. fucking. game.
 	if not self.channel:IsReady() then
-		log("channel not ready")
+		log("ICComm Channel not ready")
 		self.timerJoinICCommChannel = ApolloTimer.Create(3, false, "JoinICCommChannel", self)
 	else
-		log("channel ready")
+		log("ICComm Channel Ready")
 
 		self.channel:SetReceivedMessageFunction("OnICCommMessageReceived", self)
 		self.channel:SetSendMessageResultFunction("OnICCommSendMessageResult", self)
@@ -298,7 +298,7 @@ end
 function VinceRaidFrames:Show()
 	if self.wndMain then
 		if self:ShouldShow() then
-			log("rebuild")
+			log("Show")
 
 			self.wndMain:Invoke()
 
@@ -549,7 +549,7 @@ end
 function VinceRaidFrames:OnShareAddonVersionTimer()
 	if self.channel and self.leader and self.player and not self:IsLeader(self.player:GetName()) then
 		self.channel:SendPrivateMessage(self.leader, self.Utilities.Serialize({version = self.Utilities.GetAddonVersion()}))
-		log("Sending version to " .. self.leader)
+		log("ICComm Sending version to " .. self.leader)
 	end
 end
 
@@ -792,6 +792,7 @@ function VinceRaidFrames:ArrangeMembers()
 	if not GroupLib.InGroup() or not self.wndMain then
 		return
 	end
+	log("Arrange members")
 	if not self.settings.groups then
 		self:CreateDefaultGroups()
 	end
@@ -1058,11 +1059,12 @@ function VinceRaidFrames:Decode(str)
 end
 
 function VinceRaidFrames:OnICCommJoin(channel, eResult)
-	log("JoinResult: " .. (self.Utilities.GetKeyByValue(ICCommLib.CodeEnumICCommJoinResult, eResult) or tostring(eResult)))
+	log(("ICComm Channel JoinResult: %s"):format(self.Utilities.GetKeyByValue(ICCommLib.CodeEnumICCommJoinResult, eResult) or tostring(eResult)))
 end
 
 function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
-	log("received from " .. tostring(idMessage))
+	log(("ICComm Received %d bytes from %s"):format((strMessage and type(strMessage) == "string") and strMessage:len() or 0, tostring(idMessage)))
+
 	local message = self:Decode(strMessage)
 	if type(message) ~= "table" then
 		return
@@ -1093,13 +1095,11 @@ function VinceRaidFrames:OnICCommMessageReceived(channel, strMessage, idMessage)
 end
 
 function VinceRaidFrames:OnICCommSendMessageResult(iccomm, eResult, idMessage)
-	if eResult == ICCommLib.CodeEnumICCommMessageResult.Throttled then
-		log("MESSAGE THROTTLED")
-	end
+	log(("ICComm SendMessageResult: %s"):format((self.Utilities.GetKeyByValue(ICCommLib.CodeEnumICCommMessageResult, eResult) or tostring(eResult))))
 end
 
 function VinceRaidFrames:OnICCommThrottled(iccomm, strSender, idMessage)
-	log("msg throttgled from " .. strSender .. ", msg: " .. tostring(idMessage))
+	log(("ICComm Message got throttled from %s"):format(tostring(strSender)))
 end
 
 function VinceRaidFrames:OnVarChange_FrameCount()
@@ -1626,8 +1626,16 @@ function VinceRaidFrames:OnToggleVinceRaidFrames()
 	self:LoadXml("OnDocLoaded_Toggle")
 end
 
-function VinceRaidFrames:OnSlashCommand()
-	self:LoadXml("OnDocLoaded_Toggle")
+function VinceRaidFrames:OnSlashCommand(slash, arg)
+	local args = self.Utilities.ParseStrings(arg)
+	if args[1] == "debug" then
+		local newValue = not debug
+		debug = true
+		log("Debugging " .. (newValue and "enabled" or "disabled"))
+		debug = newValue
+	else
+		self:LoadXml("OnDocLoaded_Toggle")
+	end
 end
 
 function VinceRaidFrames:OnSlashRaidWarning(cmd, arg)
