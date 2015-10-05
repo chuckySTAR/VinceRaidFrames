@@ -316,6 +316,7 @@ end
 
 function VinceRaidFrames:OnDocLoaded_Main()
 	self.wndMain = ApolloLoadForm(self.xmlDoc, "VinceRaidFrames", "FixedHudStratum", self)
+	Event_FireGenericEvent("WindowManagementRegister", {wnd = self.wndMain, strName = "Vince Raid Frames"})
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames"})
 
 	self.wndGroups = self.wndMain:FindChild("Groups")
