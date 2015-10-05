@@ -159,7 +159,7 @@ function VinceRaidFrames:new(o)
 		namingMode = VinceRaidFrames.NamingMode.Shorten,
 		tanksHealsDpsLayout = true, -- received a group layout from raid lead in this session? no? then special Tanks/Heals/Dps groups are used
 		sortVertical = true, -- sort members from left to right or from top to bottom
-		hideCarbinesGroupDisplay = true
+		hideCarbinesGroupDisplay = false
 	}
 	return o
 end
@@ -345,7 +345,7 @@ function VinceRaidFrames:OnDocLoaded_Main()
 		ApolloRegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self)
 	end
 
-	self:HookGroupDisplay(self.settings.hideCarbinesGroupDisplay)
+	-- self:HookGroupDisplay(self.settings.hideCarbinesGroupDisplay)
 
 
 	self.presetsContextMenu = self.ContextMenu:new(self.xmlDoc, {
@@ -524,8 +524,6 @@ function VinceRaidFrames:OnConfigure()
 	self:LoadXml("OnDocLoaded_Options")
 end
 
-
-
 function VinceRaidFrames:HookGroupDisplay(value)
 	local groupDisplay = Apollo.GetAddon("GroupDisplay")
 	if value then
@@ -636,7 +634,7 @@ function VinceRaidFrames:OnRefresh()
 
 	self:UpdateGroupButtons()
 	self:RefreshAggroIndicators()
-	self:UpdateGroupControlsBtn()
+	-- self:UpdateGroupControlsBtn()
 end
 
 function VinceRaidFrames:UpdateGroupButtons()
