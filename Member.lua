@@ -38,7 +38,8 @@ local Potions = {
 	[35028] = "IconSprites:Icon_ItemMisc_potion_0002", -- Expert Brutality Boost
 	[36579] = "IconSprites:Icon_ItemMisc_potion_0003", -- Expert Tech Boost
 	[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Expert Finesse Boost
-
+	
+	-- OLD Adventus Potions IDs
 	[36595] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Insight Boost
 	[38158] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Grit Boost
 	[36589] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Moxie Boost
@@ -46,6 +47,16 @@ local Potions = {
 	[36580] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Tech Boost
 	[36574] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Adventus Finesse Boost
 
+	-- NEW Adventus Potions IDs
+	[35022] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Critical Hit Rating Boost
+	[35122] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Enduro Boost
+	[38153] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Critical Mitigation Boost
+	[36590] = "IconSprites:Icon_ItemMisc_potion_0001", -- Adventus Focus Recovery Boost
+	[39715] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Adventus Crit Boost
+	[36575] = "IconSprites:Icon_ItemMisc_potion_0003", -- Adventus Glance Boost
+	[36584] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Multi-Hit Boost
+	[35053] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Adventus Strikethrough Boost
+	[36557] = "IconSprites:Icon_ItemMisc_potion_0002", -- Adventus Deflect Boost
 	--			[36573] = "IconSprites:Icon_ItemMisc_UI_Item_Potion_001", -- Liquid Focus - Reactive Strikethrough Boost
 	--
 	--			[37054] = "IconSprites:Icon_ItemMisc_potion_0002", -- Reactive Finesse Boost
