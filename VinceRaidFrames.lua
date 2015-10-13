@@ -196,7 +196,7 @@ function VinceRaidFrames:OnLoad()
 	ApolloRegisterEventHandler("ChangeWorld", "OnChangeWorld", self)
 	ApolloRegisterEventHandler("TargetUnitChanged", "OnTargetUnitChanged", self)
 --	ApolloRegisterEventHandler("GroupMemberPromoted", "OnGroupMemberPromoted", self)
---	ApolloRegisterEventHandler("WindowManagementReady", "OnWindowManagementReady", self)
+	ApolloRegisterEventHandler("WindowManagementReady", "OnWindowManagementReady", self)
 	ApolloRegisterEventHandler("ToggleVinceRaidFrames", "OnToggleVinceRaidFrames", self)
 	ApolloRegisterEventHandler("MasterLootUpdate", "OnMasterLootUpdate", self)
 	Apollo.RegisterTimerHandler("VRF_ReadyCheckTimeout", "OnVRF_ReadyCheckTimeout", self)
@@ -260,10 +260,10 @@ end
 
 function VinceRaidFrames:JoinICCommChannel()
 	self.timerJoinICCommChannel = nil
-	
+
 	self.channel = ICCommLib.JoinChannel("VinceRF", ICCommLib.CodeEnumICCommChannelType.Group)
 	self.channel:SetJoinResultFunction("OnICCommJoin", self)
-	
+
 	-- this. fucking. game.
 	if not self.channel:IsReady() then
 		log("ICComm Channel not ready")
@@ -512,7 +512,9 @@ end
 
 
 function VinceRaidFrames:OnWindowManagementReady()
+	Event_FireGenericEvent("WindowManagementRegister", {wnd = self.wndMain, strName = "Vince Raid Frames"})
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndMain, strName = "Vince Raid Frames"})
+	Event_FireGenericEvent("WindowManagementRegister", {wnd = self.wndOptions, strName = "Vince Raid Frames Options"})
 	Event_FireGenericEvent("WindowManagementAdd", {wnd = self.wndOptions, strName = "Vince Raid Frames Options"})
 end
 
@@ -1346,7 +1348,7 @@ function VinceRaidFrames:ImportGroupLayout(tbl)
 	self.settings.groups = {}
 	local memberNameToId, idToMemberName = self:MapMemberNamesToId()
 	local currentGroupIndex = 0
-	
+
 	for i, val in ipairs(tbl) do
 		if type(val) == "string" then
 			tinsert(self.settings.groups, {
