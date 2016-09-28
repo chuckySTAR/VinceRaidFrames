@@ -342,7 +342,7 @@ function VinceRaidFrames:OnDocLoaded_Main()
 	self.wndMain:SetOpacity(self.settings.alpha, 100)
 
 	if self.settings.memberShowArrow then
-		ApolloRegisterEventHandler("VarChange_FrameCount", "OnVarChange_FrameCount", self)
+		ApolloRegisterEventHandler("NextFrame", "OnNextFrame", self)
 	end
 
 	-- self:HookGroupDisplay(self.settings.hideCarbinesGroupDisplay)
@@ -502,7 +502,7 @@ function VinceRaidFrames:Hide()
 		self.timer:Stop()
 		self.wndMain:Close()
 
-		Apollo.RemoveEventHandler("VarChange_FrameCount", self)
+		Apollo.RemoveEventHandler("NextFrame", self)
 		Apollo.RemoveEventHandler("ICCommReceiveThrottled", self)
 
 		--		self.wndMain:Destroy()
@@ -1103,7 +1103,7 @@ function VinceRaidFrames:OnICCommThrottled(iccomm, strSender, idMessage)
 	log(("ICComm Message got throttled from %s"):format(tostring(strSender)))
 end
 
-function VinceRaidFrames:OnVarChange_FrameCount()
+function VinceRaidFrames:OnNextFrame()
 	local player = GameLibGetPlayerUnit()
 	local playerPosition = player:GetPosition()
 	local playerHeading = player:GetHeading()
